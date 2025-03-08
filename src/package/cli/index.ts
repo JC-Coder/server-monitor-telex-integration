@@ -7,11 +7,10 @@ import {
   stopMonitoring,
   isMonitoringRunning,
 } from "../lib/monitor.js";
-import { setServerName, clearConfig } from "../config/config.js";
 import { logger } from "../utils/logger.js";
 import fs from "fs";
 import path from "path";
-import os from "os";
+import { clearStore, setServerName, TELEX_MONITOR_DIR } from "../index.js";
 
 // Create the CLI program
 const program = new Command();
@@ -35,11 +34,10 @@ program
   .action(async (options) => {
     try {
       // Create the config directory if it doesn't exist
-      const configDir = path.join(os.homedir(), ".telex-monitor");
-      const logsDir = path.join(configDir, "logs");
+      const logsDir = path.join(TELEX_MONITOR_DIR, "logs");
 
-      if (!fs.existsSync(configDir)) {
-        fs.mkdirSync(configDir, { recursive: true });
+      if (!fs.existsSync(TELEX_MONITOR_DIR)) {
+        fs.mkdirSync(TELEX_MONITOR_DIR, { recursive: true });
       }
 
       if (!fs.existsSync(logsDir)) {
@@ -118,7 +116,7 @@ program
         stopMonitoring();
       }
 
-      clearConfig();
+      clearStore();
       logger.info("All configuration has been reset");
     } catch (error) {
       logger.error(

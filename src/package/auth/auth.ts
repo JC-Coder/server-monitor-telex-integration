@@ -2,28 +2,21 @@ import axios from "axios";
 import {
   getToken,
   isTokenValid,
-  logger,
-  saveAuth,
+  saveStoreData,
   TELEX_API_URL,
   updateSettings,
 } from "../index.js";
 
 // Define the authentication response type
 interface AuthResponse {
-  token: string;
-  settings: {
-    metrics: {
-      cpu: boolean;
-      memory: boolean;
-      disk: boolean;
+  status: string;
+  message: string;
+  status_code: number;
+  data: {
+    user: {
+      email: string;
     };
-    thresholds: {
-      cpu: number;
-      memory: number;
-      disk: number;
-    };
-    frequency: number;
-    channelIds: string[];
+    access_token: string;
   };
 }
 
@@ -46,15 +39,20 @@ export async function authenticate(
       }
     );
 
-    console.error('response from auth', response);
-
-    const { token, settings } = response.data;
+    const {
+      data: {
+        access_token,
+        user: { email: authUserEmail },
+      },
+    } = response.data;
 
     // Save the token and settings
-    saveAuth(email, token);
-    updateSettings(settings);
+    saveStoreData({
+      authToken: access_token,
+      authEmail: authUserEmail,
+    });
 
-    return token;
+    return access_token;
   } catch (error) {
     if (axios.isAxiosError(error)) {
       if (error.response) {

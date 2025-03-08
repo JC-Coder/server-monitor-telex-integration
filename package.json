@@ -2,16 +2,16 @@
   "name": "telex-server-monitor",
   "version": "1.0.0",
   "description": "Server monitoring agent that integrates with Telex platform",
-  "main": "src/package/index.ts",
+  "main": "dist/package/index.js",
   "type": "module",
   "bin": {
-    "telex-server-monitor": "bin/cli.js"
+    "telex-server-monitor": "dist/package/cli/index.js"
   },
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/package/cli/index.ts",
     "dev:mastra": "mastra dev",
-    "start": "tsx src/package/cli/index.ts",
+    "start": "tsx src/package/cli/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "postinstall": "mkdir -p bin && echo '#!/usr/bin/env node\nimport \"tsx/cjs\";\nimport \"../src/package/cli/index.ts\";' > bin/cli.js && chmod +x bin/cli.js"
   },

@@ -2,6 +2,7 @@ import { z } from "zod";
 import os from "os";
 import path from "path";
 import fs from "fs";
+import { getStoreData } from "../index.js";
 
 // Define the config directory
 const CONFIG_DIR = path.join(os.homedir(), ".telex-monitor");
@@ -150,7 +151,8 @@ export function isTokenValid(): boolean {
  * Get the authentication token
  */
 export function getToken(): string | undefined {
-  return currentConfig.token;
+  const storeData = getStoreData();
+  return storeData?.authToken;
 }
 
 /**
@@ -167,23 +169,3 @@ export function setServerName(name: string): void {
   currentConfig.serverName = name;
   saveConfig(currentConfig);
 }
-
-/**
- * Clear all configuration
- */
-export function clearConfig(): void {
-  currentConfig = defaultConfig;
-  saveConfig(currentConfig);
-}
-
-export default {
-  getConfig,
-  setConfig,
-  updateSettings,
-  saveAuth,
-  isTokenValid,
-  getToken,
-  getServerName,
-  setServerName,
-  clearConfig,
-};
