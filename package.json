@@ -1,25 +1,44 @@
 {
-  "name": "server",
+  "name": "telex-server-monitor",
   "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "mastra dev"
+  "description": "Server monitoring agent that integrates with Telex platform",
+  "main": "src/package/index.ts",
+  "type": "module",
+  "bin": {
+    "telex-server-monitor": "bin/cli.js"
   },
-  "keywords": [],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/package/cli/index.ts",
+    "dev:mastra": "mastra dev",
+    "start": "tsx src/package/cli/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "mkdir -p bin && echo '#!/usr/bin/env node\nimport \"tsx/cjs\";\nimport \"../src/package/cli/index.ts\";' > bin/cli.js && chmod +x bin/cli.js"
+  },
+  "keywords": [
+    "telex",
+    "monitoring",
+    "server",
+    "metrics",
+    "system"
+  ],
   "author": "",
   "license": "ISC",
-  "description": "",
-  "type": "module",
   "dependencies": {
-    "@ai-sdk/openai": "^1.2.1",
-    "@mastra/core": "^0.4.4",
+    "@ai-sdk/google": "^1.1.20",
     "mastra": "^0.2.8",
+    "@mastra/core": "^0.4.4",
+    "axios": "^1.6.7",
+    "commander": "^12.0.0",
+    "systeminformation": "^5.21.24",
+    "tsx": "^4.19.3",
+    "winston": "^3.11.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
-    "tsx": "^4.19.3",
+    "@types/systeminformation": "^3.23.1",
+    "@types/winston": "^2.4.4",
     "typescript": "^5.8.2"
   }
 }
