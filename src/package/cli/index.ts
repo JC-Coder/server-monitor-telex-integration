@@ -52,9 +52,7 @@ program
 
       // Authenticate with Telex
       logger.info(`Authenticating with Telex as ${options.email}...`);
-      const token = await authenticate(options.email, options.password);
-
-      // TODO: Check if the auth failed and token not gotten and handle it
+      await authenticate(options.email, options.password);
 
       logger.info("Authentication successful! Token and settings saved.");
       logger.info(
