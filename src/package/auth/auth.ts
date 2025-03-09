@@ -1,9 +1,9 @@
 import axios from "axios";
 import {
+  AppConstants,
   getToken,
   isTokenValid,
   saveStoreData,
-  TELEX_API_URL,
   updateSettings,
 } from "../index.js";
 
@@ -32,7 +32,7 @@ export async function authenticate(
 ): Promise<string> {
   try {
     const response = await axios.post<AuthResponse>(
-      `${TELEX_API_URL}/auth/login`,
+      `${AppConstants.Telex.LoginUrl}`,
       {
         email,
         password,
@@ -100,7 +100,7 @@ export async function getAuthToken(
  */
 export async function fetchSettings(token: string): Promise<void> {
   try {
-    const response = await axios.get(`${TELEX_API_URL}/settings`, {
+    const response = await axios.get(`${AppConstants.Telex}/settings`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

@@ -1,7 +1,6 @@
 import fs from "fs";
-import path from "path";
 import { logger } from "./logger.js";
-import { TELEX_MONITOR_DIR } from "./constant.js";
+import { AppConstants } from "../index.js";
 
 interface IStore {
   authToken: string;
@@ -24,12 +23,10 @@ interface IStore {
   };
 }
 
-const STORE_FILE = path.join(TELEX_MONITOR_DIR, "store.json");
-
 // Ensure store directory exists
 function ensureStoreExists(): void {
-  if (!fs.existsSync(TELEX_MONITOR_DIR)) {
-    fs.mkdirSync(TELEX_MONITOR_DIR, { recursive: true });
+  if (!fs.existsSync(AppConstants.Package.BaseDir)) {
+    fs.mkdirSync(AppConstants.Package.BaseDir, { recursive: true });
   }
 }
 
@@ -38,8 +35,8 @@ function ensureStoreExists(): void {
  */
 export function clearStore(): void {
   try {
-    if (fs.existsSync(STORE_FILE)) {
-      fs.unlinkSync(STORE_FILE);
+    if (fs.existsSync(AppConstants.Package.StoreFile)) {
+      fs.unlinkSync(AppConstants.Package.StoreFile);
     }
   } catch (error) {
     logger.error(`Failed to clear store: ${(error as Error).message}`);
@@ -56,13 +53,18 @@ export function saveStoreData(data: Partial<IStore>): void {
     ensureStoreExists();
 
     let store: IStore = {} as IStore;
-    if (fs.existsSync(STORE_FILE)) {
-      store = JSON.parse(fs.readFileSync(STORE_FILE, "utf-8")) as IStore;
+    if (fs.existsSync(AppConstants.Package.StoreFile)) {
+      store = JSON.parse(
+        fs.readFileSync(AppConstants.Package.StoreFile, "utf-8")
+      ) as IStore;
     }
 
     // Merge new data with existing store
     const updatedStore = { ...store, ...data };
-    fs.writeFileSync(STORE_FILE, JSON.stringify(updatedStore, null, 2));
+    fs.writeFileSync(
+      AppConstants.Package.StoreFile,
+      JSON.stringify(updatedStore, null, 2)
+    );
   } catch (error) {
     logger.error(`Failed to save store data: ${(error as Error).message}`);
     throw error;
@@ -75,11 +77,13 @@ export function saveStoreData(data: Partial<IStore>): void {
  */
 export function getStoreData(): IStore | undefined {
   try {
-    if (!fs.existsSync(STORE_FILE)) {
+    if (!fs.existsSync(AppConstants.Package.StoreFile)) {
       return undefined;
     }
 
-    return JSON.parse(fs.readFileSync(STORE_FILE, "utf-8")) as IStore;
+    return JSON.parse(
+      fs.readFileSync(AppConstants.Package.StoreFile, "utf-8")
+    ) as IStore;
   } catch (error) {
     logger.error(`Failed to read store data: ${(error as Error).message}`);
     throw error;
@@ -97,13 +101,18 @@ export function updateStoreData(
     ensureStoreExists();
 
     let store: IStore = {} as IStore;
-    if (fs.existsSync(STORE_FILE)) {
-      store = JSON.parse(fs.readFileSync(STORE_FILE, "utf-8")) as IStore;
+    if (fs.existsSync(AppConstants.Package.StoreFile)) {
+      store = JSON.parse(
+        fs.readFileSync(AppConstants.Package.StoreFile, "utf-8")
+      ) as IStore;
     }
 
     const updatedData = updater(store);
     const updatedStore = { ...store, ...updatedData };
-    fs.writeFileSync(STORE_FILE, JSON.stringify(updatedStore, null, 2));
+    fs.writeFileSync(
+      AppConstants.Package.StoreFile,
+      JSON.stringify(updatedStore, null, 2)
+    );
   } catch (error) {
     logger.error(`Failed to update store data: ${(error as Error).message}`);
     throw error;

@@ -10,7 +10,7 @@ import {
 import { logger } from "../utils/logger.js";
 import fs from "fs";
 import path from "path";
-import { clearStore, setServerName, TELEX_MONITOR_DIR } from "../index.js";
+import { AppConstants, clearStore, setServerName } from "../index.js";
 
 // Create the CLI program
 const program = new Command();
@@ -33,15 +33,14 @@ program
   )
   .action(async (options) => {
     try {
-      // Create the config directory if it doesn't exist
-      const logsDir = path.join(TELEX_MONITOR_DIR, "logs");
-
-      if (!fs.existsSync(TELEX_MONITOR_DIR)) {
-        fs.mkdirSync(TELEX_MONITOR_DIR, { recursive: true });
+      // Create the base directory if it doesn't exist
+      if (!fs.existsSync(AppConstants.Package.BaseDir)) {
+        fs.mkdirSync(AppConstants.Package.BaseDir, { recursive: true });
       }
 
-      if (!fs.existsSync(logsDir)) {
-        fs.mkdirSync(logsDir, { recursive: true });
+      // Create the logs directory if it doesn't exist
+      if (!fs.existsSync(AppConstants.Package.LogsDir)) {
+        fs.mkdirSync(AppConstants.Package.LogsDir, { recursive: true });
       }
 
       // Set the server name if provided

@@ -7,7 +7,7 @@ import {
 } from "../metrics/collector.js";
 import { fetchSettings, getAuthToken } from "../auth/auth.js";
 import { createLogger } from "../utils/logger.js";
-import { TELEX_API_URL } from "../utils/constant.js";
+import { AppConstants } from "../utils/constant.js";
 
 // Create a logger
 const logger = createLogger("monitor");
@@ -25,7 +25,7 @@ async function sendMetricsToTelex(
   token: string
 ): Promise<void> {
   try {
-    await axios.post(`${TELEX_API_URL}/metrics`, metricsData, {
+    await axios.post(`${AppConstants.Telex.LoginUrl}/metrics`, metricsData, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -68,7 +68,7 @@ async function sendAlertsToTelex(
   try {
     for (const channelId of config.settings.channelIds) {
       await axios.post(
-        `${TELEX_API_URL}/channels/${channelId}/alerts`,
+        `${AppConstants.Telex.LoginUrl}/channels/${channelId}/alerts`,
         { alerts },
         {
           headers: {
