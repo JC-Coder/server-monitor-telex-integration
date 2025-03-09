@@ -9,17 +9,51 @@ import {
 } from "../lib/monitor.js";
 import { logger } from "../utils/logger.js";
 import fs from "fs";
-import path from "path";
 import { AppConstants, clearStore, setServerName } from "../index.js";
+import chalk from "chalk";
+import ora from "ora";
+
+// Add this new utility function
+function displayIntegrationHeader() {
+  const art = `
+  ████████╗███████╗██╗     ███████╗██╗  ██╗
+  ╚══██╔══╝██╔════╝██║     ██╔════╝╚██╗██╔╝
+     ██║   █████╗  ██║     █████╗   ╚███╔╝ 
+     ██║   ██╔══╝  ██║     ██╔══╝   ██╔██╗ 
+     ██║   ███████╗███████╗███████╗██╔╝ ██╗
+     ╚═╝   ╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝
+  `;
+
+  console.log(chalk.blueBright(art));
+  console.log(
+    chalk.whiteBright.bold(
+      `  Telex Server Monitor ${AppConstants.Package.Version}\n`
+    )
+  );
+}
 
 // Create the CLI program
 const program = new Command();
+
+// Modify the preAction hook to use async/await
+program.hook("preAction", async (thisCommand) => {
+  displayIntegrationHeader();
+  const spinner = ora({
+    text: `Initializing ${chalk.blueBright("Telex Server Monitor")}\n`,
+    spinner: "dots",
+    color: "blue",
+  }).start();
+
+  // Wait for 1 second using a Promise
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  spinner.succeed("Ready!\n");
+});
 
 // Set up program metadata
 program
   .name("telex-server-monitor")
   .description("Server monitoring agent that integrates with Telex platform")
-  .version("1.0.0");
+  .version(AppConstants.Package.Version);
 
 // Setup command
 program
