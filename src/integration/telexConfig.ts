@@ -43,7 +43,8 @@ export const telexGeneratedConfig = {
       {
         label: "outputFrequency",
         type: "number",
-        description: "How often do you want to get updates in minutes ?",
+        description:
+          "How often do you want to get updates in minutes ? must be greater than or equal to 5 minutes",
         default: 1,
         required: false,
       },
