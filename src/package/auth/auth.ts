@@ -1,11 +1,6 @@
 import axios from "axios";
-import {
-  AppConstants,
-  getToken,
-  isTokenValid,
-  saveStoreData,
-  updateSettings,
-} from "../index.js";
+import { AppConstants, getStoreData, saveStoreData } from "../index.js";
+import { DateTime } from "luxon";
 
 // Define the authentication response type
 interface AuthResponse {
@@ -22,9 +17,6 @@ interface AuthResponse {
 
 /**
  * Authenticate with Telex using email and password
- * @param email User's Telex email
- * @param password User's Telex password
- * @returns Promise that resolves to the authentication token
  */
 export async function authenticate(
   email: string,
@@ -48,7 +40,10 @@ export async function authenticate(
 
     // Save the token and settings
     saveStoreData({
-      authToken: access_token,
+      authToken: {
+        value: access_token,
+        expiresAt: DateTime.now().plus({ days: 2 }).toJSDate(),
+      },
       authEmail: authUserEmail,
     });
 
@@ -69,56 +64,43 @@ export async function authenticate(
 
 /**
  * Get the current authentication token, refreshing if necessary
- * @param email User's Telex email (required if token needs refreshing)
- * @param password User's Telex password (required if token needs refreshing)
- * @returns Promise that resolves to the authentication token
  */
 export async function getAuthToken(
   email?: string,
   password?: string
 ): Promise<string> {
-  // Check if we have a valid token
-  const token = getToken();
-  if (token && isTokenValid()) {
-    return token;
-  }
+  // get token from store and check if it's not expired
+  const storeData = getStoreData();
 
-  // If we don't have a valid token, we need to authenticate
-  if (!email || !password) {
+  if (!storeData) {
     throw new Error(
-      "Authentication required: Please provide email and password"
+      `No store data found, please run ${AppConstants.PackageCommands.Setup}`
     );
   }
 
-  return authenticate(email, password);
-}
+  let needAuthRefresh = false;
 
-/**
- * Fetch user settings from Telex
- * @param token Authentication token
- * @returns Promise that resolves to the user settings
- */
-export async function fetchSettings(token: string): Promise<void> {
-  try {
-    const response = await axios.get(`${AppConstants.Telex}/settings`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+  if (storeData?.authToken?.value && !storeData?.authToken?.expiresAt) {
+    const authTokenExpiry = DateTime.fromJSDate(
+      new Date(storeData?.authToken?.expiresAt)
+    );
+    const diffInDays = authTokenExpiry.diffNow("days").negate().days;
 
-    updateSettings(response.data);
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      if (error.response) {
-        throw new Error(
-          `Failed to fetch settings: ${error.response.data.message || "Server error"}`
-        );
-      } else if (error.request) {
-        throw new Error(
-          "Failed to fetch settings: No response from Telex server"
-        );
-      }
+    if (diffInDays > AppConstants.Timers.AuthTokenExpiryInDays) {
+      needAuthRefresh = true;
     }
-    throw new Error(`Failed to fetch settings: ${(error as Error).message}`);
+  }
+
+  if (needAuthRefresh) {
+    // If we don't have a valid token, we need to authenticate
+    if (!email || !password) {
+      throw new Error(
+        "Authentication required: Please provide email and password"
+      );
+    }
+
+    return await authenticate(email, password);
+  } else {
+    return storeData.authToken.value;
   }
 }

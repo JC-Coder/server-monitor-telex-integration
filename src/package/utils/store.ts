@@ -1,26 +1,20 @@
 import fs from "fs";
 import { logger } from "./logger.js";
-import { AppConstants } from "../index.js";
+import { AppConstants, ITelexMonitorSettings } from "../index.js";
 
-interface IStore {
-  authToken: string;
+export interface IStore {
+  authToken: {
+    value: string;
+    expiresAt: string | Date; // date string
+  };
   serverName: string;
   authEmail: string;
+  organisationId: string;
   lastTokenRefresh: number;
-  settings: {
-    metrics: {
-      cpu: boolean;
-      memory: boolean;
-      disk: boolean;
-    };
-    thresholds: {
-      cpu: number;
-      memory: number;
-      disk: number;
-    };
-    frequency: number;
-    channelIds: string[];
-  };
+  settings: ITelexMonitorSettings;
+  monitorServer: boolean;
+  outputFrequency: number; // this is in minutes
+  outputChannelIds: string; // comma separated string of channel ids
 }
 
 // Ensure store directory exists
