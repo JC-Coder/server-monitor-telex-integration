@@ -2,7 +2,6 @@ import {
   AppConstants,
   getStoreData,
   IStore,
-  ITelexMonitorSettingsFromTelexApp,
   logger,
   saveStoreData,
   TelexAxiosInstance,
@@ -62,12 +61,11 @@ export async function fetchIntegrationSettings(
     const response = await TelexAxiosInstance.get(
       AppConstants.Telex.GetIntegrationSettingsUrl(orgId, integrationId)
     );
-    const responseData = response.data as ITelexResponse<
-      {
-        default: string;
-        label: string;
-      }[]
-    >;
+    const responseData = response.data as ITelexResponse<{
+      is_active: boolean;
+      is_system: boolean;
+      settings: { default: string; label: string }[];
+    }>;
 
     if (responseData.status !== "success") {
       logger.error(
@@ -78,7 +76,7 @@ export async function fetchIntegrationSettings(
       );
     }
 
-    return responseData.data;
+    return responseData?.data?.settings;
   } catch (error) {
     logger.error(`Failed to fetch integration settings: ${error}`);
     return null;
@@ -93,6 +91,8 @@ export async function fetchIntegrationSettingsForThisApp() {
     (integration) => integration.app_name === AppConstants.TelexIntegration.name
   );
 
+  console.log("integration", integration);
+
   if (!integration) {
     logger.error("Integration not found");
     throw new Error(
@@ -104,6 +104,8 @@ export async function fetchIntegrationSettingsForThisApp() {
     orgId!,
     integration.id
   );
+
+  console.log("integrationSettings", integrationSettings);
 
   let newSettings: Partial<IStore> = {};
 

@@ -34,6 +34,8 @@ export const AppConstants = {
     Setup: `${PACKAGE_NAME} setup`,
     Start: `${PACKAGE_NAME} start`,
     Stop: `${PACKAGE_NAME} stop`,
+    Reset: `${PACKAGE_NAME} reset`,
+    Help: `${PACKAGE_NAME} help`,
   },
   TelexIntegration: {
     name: "Telex Server Monitor",

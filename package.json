@@ -11,7 +11,9 @@
     "build": "tsc",
     "dev": "tsx src/package/cli/index.ts",
     "dev:mastra": "mastra dev",
+    "dev:integration": "nodemon --exec 'tsx' src/integration/index.ts",
     "start": "tsx src/package/cli/index.js",
+    "start:integration": "npm run build && node dist/integration/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "postinstall": "mkdir -p bin && echo '#!/usr/bin/env node\nimport \"tsx/cjs\";\nimport \"../src/package/cli/index.ts\";' > bin/cli.js && chmod +x bin/cli.js"
   },
@@ -27,8 +29,12 @@
   "dependencies": {
     "@ai-sdk/google": "^1.1.20",
     "@mastra/core": "^0.4.4",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
     "axios": "^1.6.7",
     "commander": "^12.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
     "luxon": "^3.5.0",
     "mastra": "^0.2.8",
     "ora": "^8.2.0",
@@ -42,6 +48,8 @@
     "@types/node": "^22.13.10",
     "@types/systeminformation": "^3.23.1",
     "@types/winston": "^2.4.4",
+    "nodemon": "^3.1.9",
+    "ts-node": "^10.9.2",
     "typescript": "^5.8.2"
   }
 }

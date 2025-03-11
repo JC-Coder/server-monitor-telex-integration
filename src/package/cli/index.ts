@@ -9,7 +9,10 @@ import { authenticate } from "../auth/auth.js";
 // } from "../lib/monitor.js";
 import { logger } from "../utils/logger.js";
 import fs from "fs";
-import { fetchIntegrationSettingsForThisApp } from "../index.js";
+import {
+  checkIfPackageIsConfiguredAlready,
+  fetchIntegrationSettingsForThisApp,
+} from "../index.js";
 import { AppConstants, clearStore, saveStoreData } from "../index.js";
 import chalk from "chalk";
 import ora from "ora";
@@ -84,6 +87,9 @@ program
         if (!fs.existsSync(AppConstants.Package.LogsDir)) {
           fs.mkdirSync(AppConstants.Package.LogsDir, { recursive: true });
         }
+
+        // check if the package is already configured
+        checkIfPackageIsConfiguredAlready();
 
         // Set the server name if provided
         if (options.serverName) {
