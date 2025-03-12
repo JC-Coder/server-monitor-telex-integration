@@ -136,7 +136,7 @@ npm run dev
 ┌─────────────┐         ┌─────────────┐         ┌─────────────┐
 │   Your      │         │ Integration │         │   Telex     │
 │   Server    │◄───────►│   Server    │◄───────►│  Platform   │
-│  (Agent)    │   ZMQ   │             │   HTTP  │             │
+│             │   ZMQ   │             │   HTTP  │             │
 └─────────────┘         └─────────────┘         └─────────────┘
 ```
 
