@@ -72,13 +72,11 @@ export async function getAuthToken(
   // get token from store and check if it's not expired
   const storeData = getStoreData();
 
-  if (!storeData) {
-    throw new Error(
-      `No store data found, please run ${AppConstants.PackageCommands.Setup}`
-    );
-  }
-
   let needAuthRefresh = false;
+
+  if (!storeData) {
+    needAuthRefresh = true;
+  }
 
   if (storeData?.authToken?.value && !storeData?.authToken?.expiresAt) {
     const authTokenExpiry = DateTime.fromJSDate(
@@ -101,6 +99,6 @@ export async function getAuthToken(
 
     return await authenticate(email, password);
   } else {
-    return storeData.authToken.value;
+    return storeData!.authToken.value;
   }
 }

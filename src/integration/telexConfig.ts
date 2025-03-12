@@ -10,7 +10,7 @@ export const telexGeneratedConfig = {
       updated_at: "2025-03-11",
     },
     integration_category: "AI & Machine Learning",
-    integration_type: "modifier",
+    integration_type: "interval",
     descriptions: {
       app_name: AppConstants.TelexIntegration.name,
       app_description:
@@ -21,6 +21,7 @@ export const telexGeneratedConfig = {
       background_color: "#4A90E2",
     },
     target_url: `${url}/webhook`,
+    tick_url: `${url}/tick`,
     key_features: [
       "Authentication with Telex for secure token management",
       "Real-time system metrics monitoring (CPU, Memory, Disk)",
@@ -33,6 +34,12 @@ export const telexGeneratedConfig = {
       "Centralized configuration management",
     ],
     settings: [
+      {
+        label: "interval",
+        type: "text",
+        required: true,
+        default: "* * * * *",
+      },
       {
         label: "monitorServer",
         type: "checkbox",

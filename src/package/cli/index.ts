@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { authenticate } from "../auth/auth.js";
+import { authenticate, getAuthToken } from "../auth/auth.js";
 // import {
 //   startMonitoring,
 //   stopMonitoring,
@@ -101,7 +101,8 @@ program
 
         // Authenticate with Telex
         logger.info(`Authenticating with Telex as ${options.email}...`);
-        await authenticate(options.email, options.password);
+        await getAuthToken(options.email, options.password);
+        logger.info("Authentication successful! Token and settings saved.");
 
         // Set the organisation ID
         saveStoreData({

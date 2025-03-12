@@ -25,6 +25,20 @@ app.get("/integration-config", (req, res) => {
   res.status(200).json(telexGeneratedConfig);
 });
 
+app.post("/webhook", (req, res) => {
+  console.log("req body", req.body);
+  res.status(200).json({
+    message: "Webhook received",
+  });
+});
+
+app.post("/tick", (req, res) => {
+  console.log("tick", req.body);
+  res.status(200).json({
+    message: "Tick received",
+  });
+});
+
 app.use("*", (req, res) => {
   res.status(200).json({
     message: "🤔 Hmm... looks like you're lost in the matrix! 🕴️",
