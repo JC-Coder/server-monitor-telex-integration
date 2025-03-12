@@ -41,6 +41,7 @@
     "systeminformation": "^5.21.24",
     "tsx": "^4.19.3",
     "winston": "^3.11.0",
+    "zeromq": "^6.3.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
@@ -48,6 +49,7 @@
     "@types/node": "^22.13.10",
     "@types/systeminformation": "^3.23.1",
     "@types/winston": "^2.4.4",
+    "@types/zeromq": "^5.2.5",
     "nodemon": "^3.1.9",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2"

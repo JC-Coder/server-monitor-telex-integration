@@ -5,7 +5,6 @@
  */
 
 export * from "./lib/monitor.js";
-export * from "./auth/auth.js";
 export * from "./metrics/collector.js";
 export * from "./config/config.js";
 export * from "./utils/logger.js";

@@ -1,87 +1,210 @@
-**TELEX SERVER MONITOR V1.0**
+# **Telex Server Monitor - Product Requirements Document (PRD)**
 
-**Basic Monitoring Setup**  
-This version establishes the core monitoring functionality with essential system metrics and authentication.
+## **Overview**
 
-**User Story:** As a system administrator, I want to monitor basic server metrics and authenticate with Telex so that I can receive alerts about critical system issues.
-
-**Acceptance Criteria:**
-
-- Users can authenticate with Telex using email and password to fetch an API token
-- The agent collects and reports CPU, memory, and disk usage metrics
-- Metrics are sent to Telex in a structured JSON format
-- Users can start and stop monitoring via CLI commands
+Telex Server Monitor is a server monitoring integration that helps system administrators track server health, detect anomalies, and receive alerts via the Telex platform. The integration consists of an agent installed on the server, which collects and reports key metrics to Telex.
 
 ---
 
-**TELEX SERVER MONITOR V1.1**  
-**Process and Service Monitoring**  
-This version adds the ability to monitor running processes and key services.
+## **Version 1.0 - Installation & Basic CPU Monitoring**
 
-**User Story:** As a system administrator, I want to monitor specific services and processes so that I can detect crashes or excessive resource usage.
+### **User Story**
 
-**Acceptance Criteria:**
+> As a system administrator, I want to install the Telex Server Monitor integration and start monitoring CPU usage so that I can track performance and detect high CPU utilization.
 
-- Users can configure which services to monitor via Telex settings
-- The agent tracks the status of specified services (running, stopped, failed)
-- The agent collects data on running processes (PID, name, CPU/memory usage)
-- Service failures trigger alerts to Telex
+### **How It Works**
 
----
+1. The user installs the Telex Server Monitor Integration in their Telex organization.
+2. The user runs a setup command in Telex to generate a cURL URL for installing the agent on their server.
+3. The user executes the installation script on the server to download and configure the agent.
+4. The agent starts collecting and sending system metrics to Telex.
 
-**TELEX SERVER MONITOR V1.2**  
-**Hardware Health Monitoring**  
-This version introduces hardware health monitoring for supported systems.
+### **Features**
 
-**User Story:** As a system administrator, I want to monitor hardware health metrics so that I can detect potential hardware failures early.
+1. **Telex Integration** - Users register the integration within their Telex organization.
+2. **Agent Installation** - Users install the agent via an installation script generated from Telex.
+3. **CPU Usage Tracking** - The agent collects total CPU usage and sends structured JSON data to Telex.
+4. **Default Threshold Alerts** - Alerts trigger when CPU usage exceeds 85%.
 
-**Acceptance Criteria:**
+### **Acceptance Criteria**
 
-- The agent collects CPU temperature and fan speed (where supported)
-- The agent collects disk health data via SMART (where supported)
-- Critical hardware conditions trigger alerts to Telex
-- The agent gracefully skips unsupported metrics without failing
-
----
-
-**TELEX SERVER MONITOR V1.3**  
-**Log Monitoring**  
-This version adds the ability to monitor system logs for errors and critical events.
-
-**User Story:** As a system administrator, I want to monitor system logs so that I can detect and respond to critical errors.
-
-**Acceptance Criteria:**
-
-- The agent monitors system logs (e.g., /var/log/syslog on Linux)
-- Users can specify log paths and keywords via Telex settings
-- The agent parses logs and summarizes error counts
-- Critical log events trigger alerts to Telex
+- Users can register the integration in Telex.
+- The agent can be installed using the generated cURL command.
+- The agent collects and sends CPU usage data.
+- Alerts trigger when CPU usage exceeds the threshold.
 
 ---
 
-**TELEX SERVER MONITOR V1.4**  
-**Uptime Tracking**  
-This version introduces server uptime monitoring and unexpected reboot detection.
+## **Version 1.1 - Custom CPU Thresholds**
 
-**User Story:** As a system administrator, I want to track server uptime so that I can detect unexpected reboots and ensure high availability.
+### **User Story**
 
-**Acceptance Criteria:**
+> As a system administrator, I want to set custom CPU usage thresholds so that I can define when alerts are triggered.
 
-- The agent tracks server uptime since the last reboot
-- Unexpected reboots trigger alerts to Telex
-- Uptime data is included in periodic reports for AI analysis
+### **Features**
+
+1. **Configurable CPU Thresholds** - Users set CPU thresholds via Telex.
+2. **Dynamic Updates** - The agent fetches updated thresholds from Telex.
+
+### **Acceptance Criteria**
+
+- Users can configure CPU thresholds in Telex.
+- The agent triggers alerts based on the configured thresholds.
 
 ---
 
-**TELEX SERVER MONITOR V1.5**  
-**Customizable Alert Thresholds**  
-This version allows users to configure custom thresholds for alerts.
+## **Version 1.2 - CPU Load Average Monitoring**
 
-**User Story:** As a system administrator, I want to set custom thresholds for alerts so that I can receive notifications based on my specific needs.
+### **User Story**
 
-**Acceptance Criteria:**
+> As a system administrator, I want to track CPU load averages so that I can analyze server performance over time.
 
-- Users can configure thresholds for CPU, memory, disk usage, and temperature via Telex settings
-- Alerts are triggered when thresholds are exceeded
-- Thresholds are fetched by the agent on startup
-- Users can adjust thresholds without redeploying the agent
+### **Features**
+
+1. **Load Average Tracking** - The agent collects 1, 5, and 15-minute load averages.
+
+### **Acceptance Criteria**
+
+- The agent collects and reports CPU load averages to Telex.
+
+---
+
+## **Version 1.3 - Per-Core CPU Monitoring**
+
+### **User Story**
+
+> As a system administrator, I want to monitor CPU usage per core so that I can identify imbalances in CPU load.
+
+### **Features**
+
+1. **Per-Core Tracking** - The agent reports usage for each CPU core.
+
+### **Acceptance Criteria**
+
+- The agent collects and sends per-core CPU usage data to Telex.
+
+---
+
+## **Version 1.4 - Memory Monitoring**
+
+### **User Story**
+
+> As a system administrator, I want to monitor memory usage so that I can detect high memory consumption.
+
+### **Features**
+
+1. **Memory Usage Tracking** - The agent reports total, used, and available memory.
+
+### **Acceptance Criteria**
+
+- The agent collects and sends memory usage data to Telex.
+
+---
+
+## **Version 1.5 - Custom Memory Thresholds**
+
+### **User Story**
+
+> As a system administrator, I want to set custom memory usage thresholds so that I can control alerting conditions.
+
+### **Features**
+
+1. **Configurable Memory Thresholds** - Users set thresholds via Telex.
+2. **Dynamic Updates** - The agent fetches updated thresholds from Telex.
+
+### **Acceptance Criteria**
+
+- Users can configure memory thresholds in Telex.
+- The agent triggers alerts based on configured thresholds.
+
+---
+
+## **Version 1.6 - Disk Usage Monitoring**
+
+### **User Story**
+
+> As a system administrator, I want to monitor disk usage so that I can prevent storage issues.
+
+### **Features**
+
+1. **Disk Space Tracking** - The agent reports total, used, and available disk space.
+
+### **Acceptance Criteria**
+
+- The agent collects and sends disk usage data to Telex.
+
+---
+
+## **Version 1.7 - Custom Disk Thresholds**
+
+### **User Story**
+
+> As a system administrator, I want to set custom disk usage thresholds so that I can receive alerts before storage runs low.
+
+### **Features**
+
+1. **Configurable Disk Thresholds** - Users set thresholds via Telex.
+2. **Dynamic Updates** - The agent fetches updated thresholds from Telex.
+
+### **Acceptance Criteria**
+
+- Users can configure disk thresholds in Telex.
+- The agent triggers alerts based on configured thresholds.
+
+---
+
+## **Version 1.8 - Service Monitoring**
+
+### **User Story**
+
+> As a system administrator, I want to monitor specific services so that I can detect crashes and failures.
+
+### **Features**
+
+1. **Service Status Tracking** - The agent checks if services are running.
+2. **Service Failure Alerts** - Alerts trigger when a monitored service stops.
+
+### **Acceptance Criteria**
+
+- Users can specify services to monitor.
+- The agent reports service status and triggers alerts on failures.
+
+---
+
+## **Version 1.9 - Process Monitoring**
+
+### **User Story**
+
+> As a system administrator, I want to track running processes so that I can detect high resource usage.
+
+### **Features**
+
+1. **Process Tracking** - The agent collects process CPU and memory usage.
+2. **Top Processes Report** - Identifies top-consuming processes.
+
+### **Acceptance Criteria**
+
+- The agent collects and sends process data to Telex.
+- Users receive alerts when processes exceed resource limits.
+
+---
+
+## **Version 1.10 - Uptime Tracking**
+
+### **User Story**
+
+> As a system administrator, I want to track server uptime so that I can detect unexpected reboots.
+
+### **Features**
+
+1. **Uptime Monitoring** - The agent reports uptime since last reboot.
+2. **Unexpected Reboot Alerts** - Alerts trigger on unplanned reboots.
+
+### **Acceptance Criteria**
+
+- The agent tracks and reports uptime to Telex.
+- Alerts trigger on unexpected reboots.
+
+---
+
+This PRD follows a structured, incremental rollout of features, ensuring a stable and efficient monitoring solution for system administrators.

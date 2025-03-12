@@ -1,151 +1,84 @@
-// import si from "systeminformation";
+import si from "systeminformation";
+import { logger } from "../utils/logger.js";
 
-// // Define the metrics data structure
-// export interface MetricsData {
-//   server_id: string;
-//   timestamp: string;
-//   metrics: {
-//     cpu?: {
-//       usage: number;
-//       load_avg: number[];
-//     };
-//     memory?: {
-//       total: number;
-//       used: number;
-//       free: number;
-//       used_percent: number;
-//     };
-//     disk?: {
-//       [mountpoint: string]: {
-//         total: number;
-//         used: number;
-//         free: number;
-//         used_percent: number;
-//       };
-//     };
-//   };
-// }
+// Define the metrics data structure
+export interface MetricsData {
+  cpu?: {
+    usage: number;
+    cores?: number;
+    load_avg?: number[];
+  };
+}
 
-// /**
-//  * Collect CPU metrics
-//  * @returns Promise that resolves to CPU metrics
-//  */
-// async function collectCpuMetrics(): Promise<MetricsData["metrics"]["cpu"]> {
-//   const [currentLoad, currentLoadAvg] = await Promise.all([
-//     si.currentLoad(),
-//     si.currentLoad().then((load) => load.avgLoad),
-//   ]);
+/**
+ * Get CPU usage
+ * @returns Promise that resolves to CPU usage percentage
+ */
+export async function getCpuUsage(): Promise<number> {
+  try {
+    const currentLoad = await si.currentLoad();
+    return currentLoad.currentLoad;
+  } catch (error) {
+    logger.error(`Failed to get CPU usage: ${(error as Error).message}`);
+    throw error;
+  }
+}
 
-//   return {
-//     usage: currentLoad.currentLoad,
-//     load_avg: [currentLoadAvg],
-//   };
-// }
+/**
+ * Get all CPU metrics
+ * @returns Promise that resolves to complete CPU metrics
+ */
+export async function getCpuMetrics(): Promise<MetricsData["cpu"]> {
+  try {
+    const [currentLoad, cpuInfo] = await Promise.all([
+      si.currentLoad(),
+      si.cpu(),
+    ]);
 
-// /**
-//  * Collect memory metrics
-//  * @returns Promise that resolves to memory metrics
-//  */
-// async function collectMemoryMetrics(): Promise<
-//   MetricsData["metrics"]["memory"]
-// > {
-//   const mem = await si.mem();
+    const load = await si.currentLoad();
 
-//   return {
-//     total: mem.total,
-//     used: mem.used,
-//     free: mem.free,
-//     used_percent: (mem.used / mem.total) * 100,
-//   };
-// }
+    return {
+      usage: currentLoad.currentLoad,
+      cores: cpuInfo.cores,
+      load_avg: [load.avgLoad],
+    };
+  } catch (error) {
+    logger.error(`Failed to get CPU metrics: ${(error as Error).message}`);
+    throw error;
+  }
+}
 
-// /**
-//  * Collect disk metrics
-//  * @returns Promise that resolves to disk metrics
-//  */
-// async function collectDiskMetrics(): Promise<MetricsData["metrics"]["disk"]> {
-//   const fsSize = await si.fsSize();
+/**
+ * Check if CPU usage exceeds threshold
+ * @param cpuUsage The current CPU usage percentage
+ * @param threshold The threshold to check against
+ * @returns True if the CPU usage exceeds the threshold, false otherwise
+ */
+export function checkCpuThreshold(
+  cpuUsage: number,
+  threshold: number = 85
+): boolean {
+  return cpuUsage > threshold;
+}
 
-//   const diskMetrics: MetricsData["metrics"]["disk"] = {};
+/**
+ * Get formatted CPU metrics for display
+ */
+export async function getFormattedCpuMetrics(): Promise<string> {
+  try {
+    const cpuMetrics = await getCpuMetrics();
 
-//   for (const fs of fsSize) {
-//     diskMetrics[fs.mount] = {
-//       total: fs.size,
-//       used: fs.used,
-//       free: fs.size - fs.used,
-//       used_percent: fs.use,
-//     };
-//   }
+    if (!cpuMetrics) {
+      return "Error: Could not retrieve CPU metrics";
+    }
 
-//   return diskMetrics;
-// }
-
-// /**
-//  * Collect all enabled metrics based on configuration
-//  * @returns Promise that resolves to all metrics data
-//  */
-// export async function collectMetrics(): Promise<MetricsData> {
-//   const config = getConfig();
-//   const serverName = getServerName();
-
-//   const metrics: MetricsData["metrics"] = {};
-
-//   // Collect metrics based on configuration
-//   if (config.settings.metrics.cpu) {
-//     metrics.cpu = await collectCpuMetrics();
-//   }
-
-//   if (config.settings.metrics.memory) {
-//     metrics.memory = await collectMemoryMetrics();
-//   }
-
-//   if (config.settings.metrics.disk) {
-//     metrics.disk = await collectDiskMetrics();
-//   }
-
-//   return {
-//     server_id: serverName,
-//     timestamp: new Date().toISOString(),
-//     metrics,
-//   };
-// }
-
-// /**
-//  * Check if any metrics exceed their thresholds
-//  * @param metricsData The collected metrics data
-//  * @returns Object containing alerts for any exceeded thresholds
-//  */
-// export function checkThresholds(metricsData: MetricsData): {
-//   [metric: string]: string;
-// } {
-//   const config = getConfig();
-//   const alerts: { [metric: string]: string } = {};
-
-//   // Check CPU threshold
-//   if (
-//     metricsData.metrics.cpu &&
-//     metricsData.metrics.cpu.usage > config.settings.thresholds.cpu
-//   ) {
-//     alerts.cpu = `CPU usage is ${metricsData.metrics.cpu.usage.toFixed(1)}%, which exceeds the threshold of ${config.settings.thresholds.cpu}%`;
-//   }
-
-//   // Check memory threshold
-//   if (
-//     metricsData.metrics.memory &&
-//     metricsData.metrics.memory.used_percent > config.settings.thresholds.memory
-//   ) {
-//     alerts.memory = `Memory usage is ${metricsData.metrics.memory.used_percent.toFixed(1)}%, which exceeds the threshold of ${config.settings.thresholds.memory}%`;
-//   }
-
-//   // Check disk thresholds
-//   if (metricsData.metrics.disk) {
-//     for (const [mount, disk] of Object.entries(metricsData.metrics.disk)) {
-//       if (disk.used_percent > config.settings.thresholds.disk) {
-//         alerts[`disk_${mount}`] =
-//           `Disk usage for ${mount} is ${disk.used_percent.toFixed(1)}%, which exceeds the threshold of ${config.settings.thresholds.disk}%`;
-//       }
-//     }
-//   }
-
-//   return alerts;
-// }
+    return `
+CPU Usage: ${cpuMetrics.usage.toFixed(2)}%
+CPU Cores: ${cpuMetrics.cores || "N/A"}
+Load Average: ${cpuMetrics.load_avg?.[0]?.toFixed(2) || "N/A"}
+    `.trim();
+  } catch (error) {
+    logger.error(`Failed to format CPU metrics: ${(error as Error).message}`);
+    return "Error fetching CPU metrics";
+  }
+}

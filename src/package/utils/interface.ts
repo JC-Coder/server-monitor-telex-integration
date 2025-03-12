@@ -1,13 +1,6 @@
 export interface ITelexMonitorSettings {
   metrics: {
     cpu: boolean;
-    memory: boolean;
-    disk: boolean;
-  };
-  thresholds: {
-    cpu: number;
-    memory: number;
-    disk: number;
   };
 }
 

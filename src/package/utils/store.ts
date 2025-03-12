@@ -3,18 +3,12 @@ import { logger } from "./logger.js";
 import { AppConstants, ITelexMonitorSettings } from "../index.js";
 
 export interface IStore {
-  authToken: {
-    value: string;
-    expiresAt: string | Date; // date string
-  };
+  isMonitoringRunning: boolean;
   serverName: string;
-  authEmail: string;
-  organisationId: string;
-  lastTokenRefresh: number;
   settings: ITelexMonitorSettings;
   monitorServer: boolean;
   outputFrequency: number; // this is in minutes
-  outputChannelIds: string; // comma separated string of channel ids
+  outputChannelId: string;
 }
 
 // Ensure store directory exists

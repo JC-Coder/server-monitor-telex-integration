@@ -1,4 +1,4 @@
-import { AppConstants } from "../package/index.js";
+import { AppConstants } from "../../package/index.js";
 import { integrationEnvConfig } from "./config.js";
 
 const url = integrationEnvConfig.integrationUrl;
@@ -56,10 +56,10 @@ export const telexGeneratedConfig = {
         required: false,
       },
       {
-        label: "outputChannelIds",
+        label: "outputChannelId",
         type: "text",
         description: "Which channel do you want to send the updates to ?",
-        default: "channelId1,channelId2",
+        default: "provide the channel id here",
         required: false,
       },
     ],

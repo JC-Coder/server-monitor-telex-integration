@@ -7,9 +7,9 @@ export function checkIfPackageIsConfiguredAlready() {
     return;
   }
 
-  const { authToken, authEmail, organisationId } = storeData;
+  const { outputChannelId } = storeData;
 
-  if (!authToken || !authEmail || !organisationId) {
+  if (!outputChannelId) {
     return false;
   }
 

@@ -1,191 +1,150 @@
-// import axios from "axios";
-// import {
-//   collectMetrics,
-//   checkThresholds,
-//   MetricsData,
-// } from "../metrics/collector.js";
-// import { getAuthToken } from "../auth/auth.js";
-// import { createLogger } from "../utils/logger.js";
-// import { AppConstants } from "../utils/constant.js";
+import { Reply } from "zeromq";
+import {
+  getCpuUsage,
+  getCpuMetrics,
+  getFormattedCpuMetrics,
+  checkCpuThreshold,
+} from "../metrics/collector.js";
+import { logger } from "../utils/logger.js";
+import {
+  getStoreData,
+  saveStoreData,
+  updateStoreData,
+} from "../utils/store.js";
 
-// // Create a logger
-// const logger = createLogger("monitor");
+// Store the socket for the monitoring process
+let monitorSocket: Reply | null = null;
 
-// // Store the interval ID for the monitoring process
-// let monitoringInterval: NodeJS.Timeout | null = null;
+/**
+ * Start the monitoring process with ZeroMQ
+ * @param channelId The channel ID to use for communication
+ */
+export async function startMonitoring(): Promise<void> {
+  try {
+    if (getStoreData()?.isMonitoringRunning) {
+      logger.warn("Monitoring is already running");
+      return;
+    }
 
-// /**
-//  * Send metrics data to Telex
-//  * @param metricsData The metrics data to send
-//  * @param token The authentication token
-//  */
-// async function sendMetricsToTelex(
-//   metricsData: MetricsData,
-//   token: string
-// ): Promise<void> {
-//   try {
-//     await axios.post(`${AppConstants.Telex.LoginUrl}/metrics`, metricsData, {
-//       headers: {
-//         Authorization: `Bearer ${token}`,
-//         "Content-Type": "application/json",
-//       },
-//     });
+    const storeData = getStoreData();
+    const channelId = storeData?.outputChannelId;
 
-//     logger.info("Metrics sent to Telex successfully");
-//   } catch (error) {
-//     if (axios.isAxiosError(error)) {
-//       if (error.response) {
-//         logger.error(
-//           `Failed to send metrics: ${
-//             error.response.data.message || "Server error"
-//           }`
-//         );
-//       } else if (error.request) {
-//         logger.error("Failed to send metrics: No response from Telex server");
-//       }
-//     } else {
-//       logger.error(`Failed to send metrics: ${(error as Error).message}`);
-//     }
-//   }
-// }
+    // Get channel ID from store if not provided
+    if (!channelId) {
+      throw new Error("No channel ID found. Please run setup first.");
+    }
 
-// /**
-//  * Send alerts to Telex
-//  * @param alerts The alerts to send
-//  * @param token The authentication token
-//  */
-// async function sendAlertsToTelex(
-//   alerts: { [metric: string]: string },
-//   token: string
-// ): Promise<void> {
-//   if (Object.keys(alerts).length === 0) {
-//     return;
-//   }
+    logger.info(`Starting monitoring with channel ID: ${channelId}`);
 
-//   const config = getConfig();
+    // Create ZeroMQ reply socket
+    monitorSocket = new Reply();
 
-//   try {
-//     for (const channelId of config.settings.channelIds) {
-//       await axios.post(
-//         `${AppConstants.Telex.LoginUrl}/channels/${channelId}/alerts`,
-//         { alerts },
-//         {
-//           headers: {
-//             Authorization: `Bearer ${token}`,
-//             "Content-Type": "application/json",
-//           },
-//         }
-//       );
-//     }
+    // Bind to the socket
+    const socketAddress = `tcp://127.0.0.1:${10000 + (parseInt(channelId.slice(-4), 16) % 10000)}`;
+    await monitorSocket.bind(socketAddress);
+    logger.info(`Bound to ZeroMQ socket at ${socketAddress}`);
 
-//     logger.info(`Sent ${Object.keys(alerts).length} alerts to Telex`);
-//   } catch (error) {
-//     if (axios.isAxiosError(error)) {
-//       if (error.response) {
-//         logger.error(
-//           `Failed to send alerts: ${
-//             error.response.data.message || "Server error"
-//           }`
-//         );
-//       } else if (error.request) {
-//         logger.error("Failed to send alerts: No response from Telex server");
-//       }
-//     } else {
-//       logger.error(`Failed to send alerts: ${(error as Error).message}`);
-//     }
-//   }
-// }
+    saveStoreData({ isMonitoringRunning: true });
 
-// /**
-//  * Run a single monitoring cycle
-//  */
-// export async function runMonitoringCycle(): Promise<void> {
-//   try {
-//     // Get the authentication token
-//     const token = getToken();
-//     if (!token) {
-//       logger.error("No authentication token found. Please run setup first.");
-//       return;
-//     }
+    // Start processing messages
+    for await (const [message] of monitorSocket) {
+      try {
+        const request = JSON.parse(message.toString());
+        logger.info(`Received request: ${JSON.stringify(request)}`);
 
-//     // Collect metrics
-//     const metricsData = await collectMetrics();
-//     logger.info("Collected metrics successfully");
+        let response;
 
-//     // Check thresholds and generate alerts
-//     const alerts = checkThresholds(metricsData);
-//     if (Object.keys(alerts).length > 0) {
-//       logger.warn(
-//         `Found ${Object.keys(alerts).length} alerts: ${Object.values(
-//           alerts
-//         ).join(", ")}`
-//       );
-//     }
+        // Process different types of requests
+        switch (request.type) {
+          case "getCpuUsage":
+            response = {
+              type: "cpuUsage",
+              data: await getCpuUsage(),
+            };
+            break;
 
-//     // Send metrics and alerts to Telex
-//     await sendMetricsToTelex(metricsData, token);
-//     if (Object.keys(alerts).length > 0) {
-//       await sendAlertsToTelex(alerts, token);
-//     }
-//   } catch (error) {
-//     logger.error(`Monitoring cycle failed: ${(error as Error).message}`);
-//   }
-// }
+          case "getCpuMetrics":
+            response = {
+              type: "cpuMetrics",
+              data: await getCpuMetrics(),
+            };
+            break;
 
-// /**
-//  * Start the monitoring process
-//  */
-// export async function startMonitoring(): Promise<void> {
-//   if (monitoringInterval) {
-//     logger.warn("Monitoring is already running");
-//     return;
-//   }
+          case "getFormattedCpuMetrics":
+            response = {
+              type: "formattedCpuMetrics",
+              data: await getFormattedCpuMetrics(),
+            };
+            break;
 
-//   try {
-//     // Get the authentication token
-//     const token = await getAuthToken();
+          case "checkCpuThreshold":
+            const threshold = request.threshold || 85;
+            const usage = await getCpuUsage();
+            response = {
+              type: "cpuThreshold",
+              data: {
+                usage,
+                threshold,
+                exceeded: checkCpuThreshold(usage, threshold),
+              },
+            };
+            break;
 
-//     // Fetch the latest settings
-//     await fetchSettings(token);
+          case "ping":
+            response = {
+              type: "pong",
+              timestamp: new Date().toISOString(),
+            };
+            break;
 
-//     const config = getConfig();
-//     const frequency = config.settings.frequency * 1000; // Convert to milliseconds
+          default:
+            response = {
+              type: "error",
+              error: `Unknown request type: ${request.type}`,
+            };
+        }
 
-//     logger.info(
-//       `Starting monitoring with frequency of ${config.settings.frequency} seconds`
-//     );
+        await monitorSocket.send(JSON.stringify(response));
+      } catch (error) {
+        logger.error(`Error processing message: ${(error as Error).message}`);
+        await monitorSocket.send(
+          JSON.stringify({
+            type: "error",
+            error: (error as Error).message,
+          })
+        );
+      }
+    }
+  } catch (error) {
+    logger.error(`Failed to start monitoring: ${(error as Error).message}`);
+    saveStoreData({ isMonitoringRunning: false });
+    monitorSocket = null;
+    throw error;
+  }
+}
 
-//     // Run an initial cycle immediately
-//     await runMonitoringCycle();
+/**
+ * Stop the monitoring process
+ */
+export async function stopMonitoring(): Promise<void> {
+  if (!getStoreData()?.isMonitoringRunning) {
+    logger.warn("Monitoring is not running");
+    return;
+  }
 
-//     // Set up the interval for future cycles
-//     monitoringInterval = setInterval(runMonitoringCycle, frequency);
+  try {
+    monitorSocket = null;
+    saveStoreData({ isMonitoringRunning: false });
+    logger.info("Monitoring stopped successfully");
+  } catch (error) {
+    logger.error(`Failed to stop monitoring: ${(error as Error).message}`);
+    throw error;
+  }
+}
 
-//     logger.info("Monitoring started successfully");
-//   } catch (error) {
-//     logger.error(`Failed to start monitoring: ${(error as Error).message}`);
-//     throw error;
-//   }
-// }
-
-// /**
-//  * Stop the monitoring process
-//  */
-// export function stopMonitoring(): void {
-//   if (!monitoringInterval) {
-//     logger.warn("Monitoring is not running");
-//     return;
-//   }
-
-//   clearInterval(monitoringInterval);
-//   monitoringInterval = null;
-
-//   logger.info("Monitoring stopped successfully");
-// }
-
-// /**
-//  * Check if monitoring is currently running
-//  */
-// export function isMonitoringRunning(): boolean {
-//   return monitoringInterval !== null;
-// }
+/**
+ * Check if monitoring is currently running
+ */
+export function isMonitoringRunning(): boolean {
+  return getStoreData()?.isMonitoringRunning || false;
+}
