@@ -2,7 +2,7 @@ import si from "systeminformation";
 import { logger } from "../utils/logger.js";
 
 // Define the metrics data structure
-export interface MetricsData {
+export interface IMetricsData {
   cpu?: {
     usage: number;
     cores?: number;
@@ -11,24 +11,10 @@ export interface MetricsData {
 }
 
 /**
- * Get CPU usage
- * @returns Promise that resolves to CPU usage percentage
- */
-export async function getCpuUsage(): Promise<number> {
-  try {
-    const currentLoad = await si.currentLoad();
-    return currentLoad.currentLoad;
-  } catch (error) {
-    logger.error(`Failed to get CPU usage: ${(error as Error).message}`);
-    throw error;
-  }
-}
-
-/**
  * Get all CPU metrics
  * @returns Promise that resolves to complete CPU metrics
  */
-export async function getCpuMetrics(): Promise<MetricsData["cpu"]> {
+async function getCpuMetrics(): Promise<IMetricsData["cpu"]> {
   try {
     const [currentLoad, cpuInfo] = await Promise.all([
       si.currentLoad(),
@@ -49,22 +35,9 @@ export async function getCpuMetrics(): Promise<MetricsData["cpu"]> {
 }
 
 /**
- * Check if CPU usage exceeds threshold
- * @param cpuUsage The current CPU usage percentage
- * @param threshold The threshold to check against
- * @returns True if the CPU usage exceeds the threshold, false otherwise
- */
-export function checkCpuThreshold(
-  cpuUsage: number,
-  threshold: number = 85
-): boolean {
-  return cpuUsage > threshold;
-}
-
-/**
  * Get formatted CPU metrics for display
  */
-export async function getFormattedCpuMetrics(): Promise<string> {
+async function getFormattedCpuMetrics(): Promise<string> {
   try {
     const cpuMetrics = await getCpuMetrics();
 
@@ -82,3 +55,14 @@ Load Average: ${cpuMetrics.load_avg?.[0]?.toFixed(2) || "N/A"}
     return "Error fetching CPU metrics";
   }
 }
+
+const getMetrics = async (): Promise<IMetricsData> => {
+  return {
+    cpu: await getCpuMetrics(),
+  };
+};
+
+export const CollectorService = {
+  getMetrics,
+  getFormattedCpuMetrics,
+};

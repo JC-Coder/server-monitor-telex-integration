@@ -6,7 +6,7 @@ import { Request, Response } from "express";
 import { AppResponse, IntegrationConstants } from "./utils/constant.js";
 import { TelexService } from "./services/telexRequest.js";
 import { zeromqServer } from "./services/zeromqServer.js";
-import { zeromqClient } from "./services/zeromqClient.js";
+import { getMetricsFromPackage } from "./services/metricsService.js";
 
 const app = express();
 const PORT = integrationEnvConfig.integrationPort;
@@ -33,13 +33,14 @@ app.get("/integration-config", (req: Request, res: Response) => {
 app.post("/webhook", async (req: Request, res: Response) => {
   const { channel_id, message, settings } = req.body;
   console.log("new webhook from telex", req.body);
-  
+
   // Return initial response to telex immediately
   res.status(200).json({ status: "success", message: "Message received" });
 
   // Handle setup command specifically
   if (message.includes("/setup-monitoring")) {
-    const installCommand = IntegrationConstants.Github.InstallationScriptUrl(channel_id);
+    const installCommand =
+      IntegrationConstants.Github.InstallationScriptUrl(channel_id);
     const setupInstructions = `
 🚀 *Setting Up System Monitoring*
 
@@ -72,80 +73,31 @@ Need help? Visit our documentation at ${IntegrationConstants.Github.Repository}
     return;
   }
 
-  // For other messages, try to get CPU metrics from the user's package
-  try {
-    const cpuMetrics = await zeromqClient.requestCpuMetrics(channel_id);
-    
-    if (cpuMetrics) {
-      // Format the CPU metrics response
-      const metricsMessage = `
-📊 *Current Server Metrics*
+  const result = await getMetricsFromPackage(channel_id, settings);
 
-CPU Usage: ${cpuMetrics.usage?.toFixed(2)}%
-${cpuMetrics.cores ? `CPU Cores: ${cpuMetrics.cores}` : ''}
-${cpuMetrics.load_avg ? `Load Average: ${cpuMetrics.load_avg[0]?.toFixed(2)}` : ''}
-`;
-      
-      // Send the CPU metrics back to Telex
-      TelexService.SendWebhookResponse({
-        channelId: channel_id,
-        message: metricsMessage,
-      });
-    } else {
-      // Send a generic response if we couldn't get metrics
-      TelexService.SendWebhookResponse({
-        channelId: channel_id,
-        message: "I've received your message but couldn't retrieve server metrics. Make sure the monitoring agent is properly installed and running.",
-      });
-    }
-  } catch (error) {
-    console.error("Failed to process webhook:", error);
+  if (!result) {
     TelexService.SendWebhookResponse({
       channelId: channel_id,
-      message: `Error: ${(error as Error).message}`,
+      message: `Sorry 😔, I am not able to get metrics from your server at this time, ensure the agent is active on your server`,
     });
   }
 });
 
 // tick endpoint for interval message from telex
 app.post("/tick", async (req: Request, res: Response) => {
-  const { channel_id } = req.body;
+  const { channel_id, settings } = req.body;
   console.log("new tick from telex", req.body);
-  
+
   // Return initial response to telex immediately
   res.status(200).json({ status: "success", message: "Message received" });
 
-  // Request CPU metrics from the user's package
-  try {
-    const cpuMetrics = await zeromqClient.requestCpuMetrics(channel_id);
-    
-    if (cpuMetrics) {
-      // Check if CPU usage is above threshold
-      const threshold = 85; // Could be configurable
-      const isAboveThreshold = cpuMetrics.usage > threshold;
-      
-      if (isAboveThreshold) {
-        // Alert if CPU usage is high
-        const alertMessage = `
-⚠️ *CPU ALERT* ⚠️
+  const result = await getMetricsFromPackage(channel_id, settings);
 
-CPU usage is currently at ${cpuMetrics.usage?.toFixed(2)}%, which exceeds the ${threshold}% threshold.
-
-${cpuMetrics.cores ? `CPU Cores: ${cpuMetrics.cores}` : ''}
-${cpuMetrics.load_avg ? `Load Average: ${cpuMetrics.load_avg[0]?.toFixed(2)}` : ''}
-`;
-        
-        TelexService.SendWebhookResponse({
-          channelId: channel_id,
-          message: alertMessage,
-        });
-      } else {
-        // Optionally send periodic update (could be made configurable)
-        // For now, we're not sending non-alert updates on tick to avoid spam
-      }
-    }
-  } catch (error) {
-    console.error("Failed to process tick:", error);
+  if (!result) {
+    TelexService.SendWebhookResponse({
+      channelId: channel_id,
+      message: `Sorry 😔, I am not able to get metrics from your server at this time, ensure the agent is active on your server`,
+    });
   }
 });
 
@@ -159,18 +111,13 @@ app.use("*", (_, res) => {
 });
 
 // Initialize ZeroMQ server before starting Express
-Promise.all([
-  zeromqServer.initialize(integrationEnvConfig.zeromq.basePort)
-])
+Promise.all([zeromqServer.initialize(integrationEnvConfig.zeromq.basePort)])
   .then(() => {
     // Start server
     app.listen(PORT, () => {
       console.info(`Server is running on port http://localhost:${PORT}`);
       console.info(
-        `ZeroMQ PUB socket running on port ${integrationEnvConfig.zeromq.basePort}`
-      );
-      console.info(
-        `ZeroMQ REP socket running on port ${integrationEnvConfig.zeromq.basePort + 1}`
+        `ZeroMQ Publisher running on port ${integrationEnvConfig.zeromq.basePort}`
       );
     });
   })
@@ -183,14 +130,12 @@ Promise.all([
 process.on("SIGTERM", async () => {
   console.info("SIGTERM signal received.");
   await zeromqServer.close();
-  await zeromqClient.close();
   process.exit(0);
 });
 
 process.on("SIGINT", async () => {
   console.info("SIGINT signal received.");
   await zeromqServer.close();
-  await zeromqClient.close();
   process.exit(0);
 });
 

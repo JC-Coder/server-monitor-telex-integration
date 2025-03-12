@@ -1,4 +1,4 @@
-import { Publisher, Reply } from "zeromq";
+import { Publisher } from "zeromq";
 import { logger } from "../../package/utils/logger.js";
 import { integrationEnvConfig } from "../utils/config.js";
 
@@ -12,7 +12,6 @@ export interface IZeromqMessage {
 class ZeromqServer {
   private static instance: ZeromqServer;
   private pubSocket: Publisher | null = null;
-  private repSocket: Reply | null = null;
   private isInitialized = false;
 
   private constructor() {}
@@ -37,18 +36,10 @@ class ZeromqServer {
 
       // Initialize Publisher socket
       this.pubSocket = new Publisher();
-      const pubPort = basePort;
-      await this.pubSocket.bind(`tcp://${host}:${pubPort}`);
-      logger.info(`Publisher bound to tcp://${host}:${pubPort}`);
-
-      // Initialize Reply socket
-      this.repSocket = new Reply();
-      const repPort = basePort + 1;
-      await this.repSocket.bind(`tcp://${host}:${repPort}`);
-      logger.info(`Reply socket bound to tcp://${host}:${repPort}`);
+      await this.pubSocket.bind(`tcp://${host}:${basePort}`);
+      logger.info(`Publisher bound to tcp://${host}:${basePort}`);
 
       this.isInitialized = true;
-      this.startMessageHandler();
     } catch (error) {
       logger.error(
         `Failed to initialize ZeroMQ server: ${(error as Error).message}`
@@ -76,53 +67,11 @@ class ZeromqServer {
     }
   }
 
-  private async startMessageHandler(): Promise<void> {
-    if (!this.repSocket || !this.isInitialized) {
-      throw new Error("ZeroMQ server not initialized");
-    }
-
-    try {
-      logger.info("Starting ZeroMQ message handler");
-      for await (const [msg] of this.repSocket) {
-        try {
-          const request = JSON.parse(msg.toString()) as IZeromqMessage;
-          logger.info(`Received request: ${JSON.stringify(request)}`);
-
-          // Process the request and send response
-          const response: IZeromqMessage = {
-            type: "response",
-            channelId: request.channelId,
-            data: { received: true },
-            timestamp: new Date().toISOString(),
-          };
-
-          await this.repSocket.send(JSON.stringify(response));
-        } catch (error) {
-          logger.error(`Error processing message: ${(error as Error).message}`);
-          const errorResponse: IZeromqMessage = {
-            type: "error",
-            channelId: "error",
-            data: { error: (error as Error).message },
-            timestamp: new Date().toISOString(),
-          };
-          await this.repSocket.send(JSON.stringify(errorResponse));
-        }
-      }
-    } catch (error) {
-      logger.error(`Error in message handler: ${(error as Error).message}`);
-      throw error;
-    }
-  }
-
   public async close(): Promise<void> {
     try {
       if (this.pubSocket) {
         await this.pubSocket.close();
         this.pubSocket = null;
-      }
-      if (this.repSocket) {
-        await this.repSocket.close();
-        this.repSocket = null;
       }
       this.isInitialized = false;
       logger.info("ZeroMQ server closed");

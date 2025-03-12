@@ -40,28 +40,6 @@ export const telexGeneratedConfig = {
         required: true,
         default: "* * * * *",
       },
-      {
-        label: "monitorServer",
-        type: "checkbox",
-        description: "Enable monitoring of this server",
-        default: true,
-        required: false,
-      },
-      {
-        label: "outputFrequency",
-        type: "number",
-        description:
-          "How often do you want to get updates in minutes ? must be greater than or equal to 5 minutes",
-        default: 1,
-        required: false,
-      },
-      {
-        label: "outputChannelId",
-        type: "text",
-        description: "Which channel do you want to send the updates to ?",
-        default: "provide the channel id here",
-        required: false,
-      },
     ],
     endpoints: [],
     is_active: true,

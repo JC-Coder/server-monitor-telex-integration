@@ -1,142 +1,88 @@
-import { Reply } from "zeromq";
+import { Subscriber } from "zeromq";
 import { logger } from "../utils/logger.js";
-import os from "os";
+import { CollectorService } from "../metrics/collector.js";
 
-export type MessageType =
-  | "getCpuUsage"
-  | "getCpuMetrics"
-  | "getFormattedCpuMetrics"
-  | "checkCpuThreshold"
-  | "ping";
+export enum MessageType {
+  getMetrics = "getMetrics",
+  ping = "ping",
+}
 
-export interface IZeromqRequest {
+export interface IZeromqMessage {
   type: MessageType | string;
-  threshold?: number;
-  timestamp?: string;
+  channelId: string;
+  data: any;
+  timestamp: string;
 }
 
-export interface IZeromqResponse {
-  type: MessageType | "error" | "pong" | string;
-  data?: any;
-  error?: string;
-  timestamp?: string;
-}
-
-let replySocket: Reply | null = null;
+let subSocket: Subscriber | null = null;
 
 /**
- * Get the server's public IP address
- * This is a best-effort function that might not always return the correct external IP
- * In production, you might want to use a service like ipify.org or similar
+ * Connect to the integration server's publisher socket
  */
-function getServerIP(): string {
-  const ifaces = os.networkInterfaces();
-  let serverIP = "0.0.0.0"; // Default to all interfaces if we can't determine
-
-  // Try to find a non-internal IPv4 address
-  Object.values(ifaces).forEach((ifaceDetails) => {
-    if (!ifaceDetails) return;
-    
-    ifaceDetails.forEach((details) => {
-      if (details.family === 'IPv4' && !details.internal) {
-        serverIP = details.address;
-      }
-    });
-  });
-  
-  return serverIP;
-}
-
-/**
- * Calculate port from channelId using a consistent algorithm
- * Both integration and package use this to ensure they connect on same port
- */
-export function getPortFromChannelId(channelId: string): number {
-  return 10000 + (parseInt(channelId.slice(-4), 16) % 10000);
-}
-
-/**
- * Create and bind a ZeroMQ Reply socket
- * @param channelId The channel ID to use for the socket address
- */
-export async function createReplySocket(channelId: string): Promise<void> {
+export async function connectToIntegrationServer(
+  channelId: string,
+  host: string,
+  port: number
+): Promise<void> {
   try {
-    if (replySocket) {
-      logger.warn("ZeroMQ socket is already created");
+    if (subSocket) {
+      logger.warn("ZeroMQ socket is already connected");
       return;
     }
 
-    replySocket = new Reply();
-    const port = getPortFromChannelId(channelId);
-    
-    // Bind to all interfaces (0.0.0.0) to accept remote connections
-    const socketAddress = `tcp://0.0.0.0:${port}`;
-    await replySocket.bind(socketAddress);
-    
-    const serverIP = getServerIP();
-    logger.info(`Bound to ZeroMQ socket at ${socketAddress} (external: tcp://${serverIP}:${port})`);
-    logger.info(`Channel ID ${channelId} is being served on port ${port}`);
+    subSocket = new Subscriber();
+    const socketAddress = `tcp://${host}:${port}`;
+
+    await subSocket.connect(socketAddress);
+    await subSocket.subscribe(channelId);
+
+    logger.info(`Connected to integration server at ${socketAddress}`);
+    logger.info(`Subscribed to channel ${channelId}`);
+
+    // Start message handler
+    handleMessages(channelId);
   } catch (error) {
-    logger.error(`Failed to create ZeroMQ socket: ${(error as Error).message}`);
+    logger.error(
+      `Failed to connect to integration server: ${(error as Error).message}`
+    );
     throw error;
   }
 }
 
 /**
- * Send a message through the ZeroMQ socket
- * @param response The response to send
+ * Handle incoming messages from the integration server
  */
-export async function sendMessage(response: IZeromqResponse): Promise<void> {
-  if (!replySocket) {
-    throw new Error("ZeroMQ socket not initialized");
+async function handleMessages(channelId: string): Promise<void> {
+  if (!subSocket) {
+    throw new Error("ZeroMQ socket not connected");
   }
 
   try {
-    // Always include a timestamp on responses
-    const responseWithTimestamp = {
-      ...response,
-      timestamp: response.timestamp || new Date().toISOString()
-    };
-    
-    await replySocket.send(JSON.stringify(responseWithTimestamp));
-    logger.info(`Sent response: ${JSON.stringify(responseWithTimestamp)}`);
-  } catch (error) {
-    logger.error(`Failed to send message: ${(error as Error).message}`);
-    throw error;
-  }
-}
-
-/**
- * Receive and parse messages from the ZeroMQ socket
- * @returns An async iterator for incoming messages
- */
-export async function* receiveMessages(): AsyncGenerator<
-  IZeromqRequest,
-  void,
-  unknown
-> {
-  if (!replySocket) {
-    throw new Error("ZeroMQ socket not initialized");
-  }
-
-  try {
-    for await (const [message] of replySocket) {
+    for await (const [topic, messageBuffer] of subSocket) {
       try {
-        const request = JSON.parse(message.toString()) as IZeromqRequest;
-        logger.info(`Received request: ${JSON.stringify(request)}`);
-        yield request;
+        const message = JSON.parse(messageBuffer.toString()) as IZeromqMessage;
+        logger.info(`Received message: ${JSON.stringify(message)}`);
+
+        if (topic.toString() !== channelId) {
+          continue;
+        }
+
+        // Process different types of requests
+        const incomingMessageType = message.type;
+        if (incomingMessageType === MessageType.getMetrics) {
+          const metrics = await CollectorService.getMetrics();
+          logger.info(`Metrics: ${JSON.stringify(metrics)}`);
+        } else if (incomingMessageType === MessageType.ping) {
+          logger.info("Received ping from integration server");
+        } else {
+          logger.warn(`Unknown message type: ${incomingMessageType}`);
+        }
       } catch (error) {
-        logger.error(`Error parsing message: ${(error as Error).message}`);
-        await sendMessage({
-          type: "error",
-          error: `Failed to parse message: ${(error as Error).message}`,
-        });
+        logger.error(`Error processing message: ${(error as Error).message}`);
       }
     }
   } catch (error) {
-    logger.error(
-      `Error in message receiving loop: ${(error as Error).message}`
-    );
+    logger.error(`Error in message handler: ${(error as Error).message}`);
     throw error;
   }
 }
@@ -145,12 +91,12 @@ export async function* receiveMessages(): AsyncGenerator<
  * Close the ZeroMQ socket connection
  */
 export function closeSocket(): void {
-  if (replySocket) {
+  if (subSocket) {
     try {
-      replySocket.close();
-      replySocket = null;
+      subSocket.close();
+      subSocket = null;
       logger.info("ZeroMQ socket closed");
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error(`Error closing socket: ${(error as Error).message}`);
     }
   }
