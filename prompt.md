@@ -1,0 +1,1 @@
+Note: The integration and package won't be on the same server, the integration will be running on a standalone server e.g render while the package will be hosted on users server e.g user 1 server, user 2 server etc.

@@ -1,4 +1,3 @@
-import { Reply } from "zeromq";
 import {
   getCpuUsage,
   getCpuMetrics,
@@ -6,18 +5,20 @@ import {
   checkCpuThreshold,
 } from "../metrics/collector.js";
 import { logger } from "../utils/logger.js";
+import { getStoreData, saveStoreData } from "../utils/store.js";
 import {
-  getStoreData,
-  saveStoreData,
-  updateStoreData,
-} from "../utils/store.js";
+  createReplySocket,
+  receiveMessages,
+  sendMessage,
+  closeSocket,
+  IZeromqResponse,
+  MessageType,
+} from "../services/zeromqService.js";
 
-// Store the socket for the monitoring process
-let monitorSocket: Reply | null = null;
+let isMonitoringActive = false;
 
 /**
- * Start the monitoring process with ZeroMQ
- * @param channelId The channel ID to use for communication
+ * Start the monitoring process
  */
 export async function startMonitoring(): Promise<void> {
   try {
@@ -35,90 +36,94 @@ export async function startMonitoring(): Promise<void> {
     }
 
     logger.info(`Starting monitoring with channel ID: ${channelId}`);
+    logger.info("This server will accept remote connections from the Telex integration server");
+    logger.info("Monitor will respond to requests for system metrics");
 
-    // Create ZeroMQ reply socket
-    monitorSocket = new Reply();
-
-    // Bind to the socket
-    const socketAddress = `tcp://127.0.0.1:${10000 + (parseInt(channelId.slice(-4), 16) % 10000)}`;
-    await monitorSocket.bind(socketAddress);
-    logger.info(`Bound to ZeroMQ socket at ${socketAddress}`);
-
+    // Initialize ZeroMQ socket - now binds to 0.0.0.0 to accept remote connections
+    await createReplySocket(channelId);
     saveStoreData({ isMonitoringRunning: true });
+    isMonitoringActive = true;
 
-    // Start processing messages
-    for await (const [message] of monitorSocket) {
-      try {
-        const request = JSON.parse(message.toString());
-        logger.info(`Received request: ${JSON.stringify(request)}`);
+    // Start processing messages from integration server
+    logger.info("Waiting for requests from integration server...");
+    
+    // Using try/finally to ensure we always clean up properly
+    try {
+      // Start processing messages
+      for await (const request of receiveMessages()) {
+        try {
+          let response: IZeromqResponse;
 
-        let response;
+          // Process different types of requests
+          switch (request.type) {
+            case "getCpuUsage":
+              response = {
+                type: request.type,
+                data: await getCpuUsage(),
+              };
+              break;
 
-        // Process different types of requests
-        switch (request.type) {
-          case "getCpuUsage":
-            response = {
-              type: "cpuUsage",
-              data: await getCpuUsage(),
-            };
-            break;
+            case "getCpuMetrics":
+              response = {
+                type: request.type,
+                data: await getCpuMetrics(),
+              };
+              break;
 
-          case "getCpuMetrics":
-            response = {
-              type: "cpuMetrics",
-              data: await getCpuMetrics(),
-            };
-            break;
+            case "getFormattedCpuMetrics":
+              response = {
+                type: request.type,
+                data: await getFormattedCpuMetrics(),
+              };
+              break;
 
-          case "getFormattedCpuMetrics":
-            response = {
-              type: "formattedCpuMetrics",
-              data: await getFormattedCpuMetrics(),
-            };
-            break;
+            case "checkCpuThreshold":
+              const threshold = request.threshold || 85;
+              const usage = await getCpuUsage();
+              response = {
+                type: request.type,
+                data: {
+                  usage,
+                  threshold,
+                  exceeded: checkCpuThreshold(usage, threshold),
+                },
+              };
+              break;
 
-          case "checkCpuThreshold":
-            const threshold = request.threshold || 85;
-            const usage = await getCpuUsage();
-            response = {
-              type: "cpuThreshold",
-              data: {
-                usage,
-                threshold,
-                exceeded: checkCpuThreshold(usage, threshold),
-              },
-            };
-            break;
+            case "ping":
+              response = {
+                type: "pong",
+                timestamp: new Date().toISOString(),
+              };
+              break;
 
-          case "ping":
-            response = {
-              type: "pong",
-              timestamp: new Date().toISOString(),
-            };
-            break;
+            default:
+              response = {
+                type: "error",
+                error: `Unknown request type: ${request.type}`,
+              };
+          }
 
-          default:
-            response = {
-              type: "error",
-              error: `Unknown request type: ${request.type}`,
-            };
-        }
-
-        await monitorSocket.send(JSON.stringify(response));
-      } catch (error) {
-        logger.error(`Error processing message: ${(error as Error).message}`);
-        await monitorSocket.send(
-          JSON.stringify({
+          await sendMessage(response);
+          logger.info(`Responded to ${request.type} request from integration server`);
+        } catch (error) {
+          logger.error(`Error processing message: ${(error as Error).message}`);
+          await sendMessage({
             type: "error",
             error: (error as Error).message,
-          })
-        );
+          });
+        }
+      }
+    } finally {
+      if (isMonitoringActive) {
+        await stopMonitoring();
       }
     }
   } catch (error) {
     logger.error(`Failed to start monitoring: ${(error as Error).message}`);
     saveStoreData({ isMonitoringRunning: false });
-    monitorSocket = null;
+    isMonitoringActive = false;
+    closeSocket();
     throw error;
   }
 }
@@ -133,8 +138,9 @@ export async function stopMonitoring(): Promise<void> {
   }
 
   try {
-    monitorSocket = null;
+    closeSocket();
     saveStoreData({ isMonitoringRunning: false });
+    isMonitoringActive = false;
     logger.info("Monitoring stopped successfully");
   } catch (error) {
     logger.error(`Failed to stop monitoring: ${(error as Error).message}`);

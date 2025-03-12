@@ -1,17 +1,15 @@
 import express from "express";
 import cors from "cors";
-import { Request as ZMQRequest } from "zeromq";
 import { telexGeneratedConfig } from "./utils/telexConfig.js";
 import { integrationEnvConfig } from "./utils/config.js";
 import { Request, Response } from "express";
 import { AppResponse, IntegrationConstants } from "./utils/constant.js";
 import { TelexService } from "./services/telexRequest.js";
+import { zeromqServer } from "./services/zeromqServer.js";
+import { zeromqClient } from "./services/zeromqClient.js";
 
 const app = express();
 const PORT = integrationEnvConfig.integrationPort;
-
-// ZeroMQ request socket map
-const requestSockets = new Map<string, ZMQRequest>();
 
 // Middleware
 app.use(cors());
@@ -32,26 +30,16 @@ app.get("/integration-config", (req: Request, res: Response) => {
 });
 
 // webhook endpoint for incoming message from telex
-app.post("/webhook", (req: Request, res: Response) => {
+app.post("/webhook", async (req: Request, res: Response) => {
   const { channel_id, message, settings } = req.body;
-
   console.log("new webhook from telex", req.body);
-
-  // return initial response to telex
+  
+  // Return initial response to telex immediately
   res.status(200).json({ status: "success", message: "Message received" });
 
-  console.log("after response");
-  // send webhook response to telex
-  TelexService.SendWebhookResponse({
-    channelId: channel_id,
-    message,
-  });
-
-  // send setup message
+  // Handle setup command specifically
   if (message.includes("/setup-monitoring")) {
-    const installCommand =
-      IntegrationConstants.Github.InstallationScriptUrl(channel_id);
-
+    const installCommand = IntegrationConstants.Github.InstallationScriptUrl(channel_id);
     const setupInstructions = `
 🚀 *Setting Up System Monitoring*
 
@@ -68,7 +56,7 @@ ${installCommand}
    • Start the monitoring service
 
 3️⃣ Once installed, you'll start receiving:
-   • CPU usage alert
+   • CPU usage alerts
 
 ⚠️ *Requirements*:
 • Linux/Unix-based system
@@ -77,123 +65,88 @@ ${installCommand}
 
 Need help? Visit our documentation at ${IntegrationConstants.Github.Repository}
 `;
-
     TelexService.SendWebhookResponse({
       channelId: channel_id,
       message: setupInstructions,
+    });
+    return;
+  }
+
+  // For other messages, try to get CPU metrics from the user's package
+  try {
+    const cpuMetrics = await zeromqClient.requestCpuMetrics(channel_id);
+    
+    if (cpuMetrics) {
+      // Format the CPU metrics response
+      const metricsMessage = `
+📊 *Current Server Metrics*
+
+CPU Usage: ${cpuMetrics.usage?.toFixed(2)}%
+${cpuMetrics.cores ? `CPU Cores: ${cpuMetrics.cores}` : ''}
+${cpuMetrics.load_avg ? `Load Average: ${cpuMetrics.load_avg[0]?.toFixed(2)}` : ''}
+`;
+      
+      // Send the CPU metrics back to Telex
+      TelexService.SendWebhookResponse({
+        channelId: channel_id,
+        message: metricsMessage,
+      });
+    } else {
+      // Send a generic response if we couldn't get metrics
+      TelexService.SendWebhookResponse({
+        channelId: channel_id,
+        message: "I've received your message but couldn't retrieve server metrics. Make sure the monitoring agent is properly installed and running.",
+      });
+    }
+  } catch (error) {
+    console.error("Failed to process webhook:", error);
+    TelexService.SendWebhookResponse({
+      channelId: channel_id,
+      message: `Error: ${(error as Error).message}`,
     });
   }
 });
 
 // tick endpoint for interval message from telex
-app.post("/tick", (req: Request, res: Response) => {
+app.post("/tick", async (req: Request, res: Response) => {
+  const { channel_id } = req.body;
   console.log("new tick from telex", req.body);
-
+  
+  // Return initial response to telex immediately
   res.status(200).json({ status: "success", message: "Message received" });
-});
 
-// Connect to a server agent via ZeroMQ
-async function connectToServer(channelId: string): Promise<ZMQRequest> {
-  if (requestSockets.has(channelId)) {
-    return requestSockets.get(channelId)!;
-  }
-
+  // Request CPU metrics from the user's package
   try {
-    // Create a new request socket
-    const socket = new ZMQRequest();
-    // Connect to the server on a port derived from the channel ID
-    const port = 10000 + (parseInt(channelId.slice(-4), 16) % 10000);
-    const socketAddress = `tcp://127.0.0.1:${port}`;
-    socket.connect(socketAddress);
+    const cpuMetrics = await zeromqClient.requestCpuMetrics(channel_id);
+    
+    if (cpuMetrics) {
+      // Check if CPU usage is above threshold
+      const threshold = 85; // Could be configurable
+      const isAboveThreshold = cpuMetrics.usage > threshold;
+      
+      if (isAboveThreshold) {
+        // Alert if CPU usage is high
+        const alertMessage = `
+⚠️ *CPU ALERT* ⚠️
 
-    // Store the socket for future use
-    requestSockets.set(channelId, socket);
+CPU usage is currently at ${cpuMetrics.usage?.toFixed(2)}%, which exceeds the ${threshold}% threshold.
 
-    console.log(
-      `Connected to server agent for channel ${channelId} at ${socketAddress}`
-    );
-    return socket;
+${cpuMetrics.cores ? `CPU Cores: ${cpuMetrics.cores}` : ''}
+${cpuMetrics.load_avg ? `Load Average: ${cpuMetrics.load_avg[0]?.toFixed(2)}` : ''}
+`;
+        
+        TelexService.SendWebhookResponse({
+          channelId: channel_id,
+          message: alertMessage,
+        });
+      } else {
+        // Optionally send periodic update (could be made configurable)
+        // For now, we're not sending non-alert updates on tick to avoid spam
+      }
+    }
   } catch (error) {
-    console.error(
-      `Failed to connect to server agent: ${(error as Error).message}`
-    );
-    throw error;
+    console.error("Failed to process tick:", error);
   }
-}
-
-// Request CPU metrics from a server
-app.post("/get-cpu-metrics", (req, res) => {
-  const { channelId } = req.body;
-
-  if (!channelId) {
-    res.status(400).json({
-      status: "error",
-      message: "Channel ID is required",
-    });
-    return;
-  }
-
-  connectToServer(channelId)
-    .then(async (socket) => {
-      // Request CPU metrics
-      await socket.send(JSON.stringify({ type: "getCpuMetrics" }));
-      const [reply] = await socket.receive();
-
-      const response = JSON.parse(reply.toString());
-
-      res.status(200).json({
-        status: "success",
-        data: response.data,
-      });
-    })
-    .catch((error) => {
-      console.error(`Failed to get CPU metrics: ${(error as Error).message}`);
-      res.status(500).json({
-        status: "error",
-        message: `Failed to get CPU metrics: ${(error as Error).message}`,
-      });
-    });
-});
-
-// Check if CPU usage exceeds threshold
-app.post("/check-cpu-threshold", (req, res) => {
-  const { channelId, threshold } = req.body;
-
-  if (!channelId) {
-    res.status(400).json({
-      status: "error",
-      message: "Channel ID is required",
-    });
-    return;
-  }
-
-  connectToServer(channelId)
-    .then(async (socket) => {
-      // Check CPU threshold
-      await socket.send(
-        JSON.stringify({
-          type: "checkCpuThreshold",
-          threshold: threshold || 85,
-        })
-      );
-      const [reply] = await socket.receive();
-
-      const response = JSON.parse(reply.toString());
-
-      res.status(200).json({
-        status: "success",
-        data: response.data,
-      });
-    })
-    .catch((error) => {
-      console.error(
-        `Failed to check CPU threshold: ${(error as Error).message}`
-      );
-      res.status(500).json({
-        status: "error",
-        message: `Failed to check CPU threshold: ${(error as Error).message}`,
-      });
-    });
 });
 
 // Generic error handler
@@ -205,9 +158,40 @@ app.use("*", (_, res) => {
   }).Success();
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.info(`Server is running on port http://localhost:${PORT}`);
+// Initialize ZeroMQ server before starting Express
+Promise.all([
+  zeromqServer.initialize(integrationEnvConfig.zeromq.basePort)
+])
+  .then(() => {
+    // Start server
+    app.listen(PORT, () => {
+      console.info(`Server is running on port http://localhost:${PORT}`);
+      console.info(
+        `ZeroMQ PUB socket running on port ${integrationEnvConfig.zeromq.basePort}`
+      );
+      console.info(
+        `ZeroMQ REP socket running on port ${integrationEnvConfig.zeromq.basePort + 1}`
+      );
+    });
+  })
+  .catch((error) => {
+    console.error("Failed to initialize ZeroMQ server:", error);
+    process.exit(1);
+  });
+
+// Handle graceful shutdown
+process.on("SIGTERM", async () => {
+  console.info("SIGTERM signal received.");
+  await zeromqServer.close();
+  await zeromqClient.close();
+  process.exit(0);
+});
+
+process.on("SIGINT", async () => {
+  console.info("SIGINT signal received.");
+  await zeromqServer.close();
+  await zeromqClient.close();
+  process.exit(0);
 });
 
 export default app;
