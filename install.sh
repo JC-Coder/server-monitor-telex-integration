@@ -103,7 +103,7 @@ sudo mkdir -p $INSTALL_DIR
 
 # Install the Telex Server Monitor package
 print_message "info" "Installing Telex Server Monitor..."
-sudo npm install -g telex-server-monitor
+sudo npm install -g telex-server-monitor-sdk
 
 # Create configuration directory
 sudo mkdir -p /etc/telex-server-monitor
