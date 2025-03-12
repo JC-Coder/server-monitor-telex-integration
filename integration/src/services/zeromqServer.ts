@@ -1,5 +1,4 @@
 import { Publisher, Subscriber } from "zeromq";
-import { logger } from "../../package/utils/logger.js";
 import { integrationEnvConfig } from "../utils/config.js";
 import { TelexService } from "./telexRequest.js";
 
@@ -25,33 +24,35 @@ class ZeromqServer {
     return ZeromqServer.instance;
   }
 
-  public async initialize(
-    basePort: number = integrationEnvConfig.zeromq.basePort
-  ): Promise<void> {
+  public async initialize(): Promise<void> {
     if (this.isInitialized) {
-      logger.warn("ZeroMQ server is already initialized");
+      console.warn("ZeroMQ server is already initialized");
       return;
     }
 
     try {
-      const host = integrationEnvConfig.zeromq.host;
+      const host = integrationEnvConfig.hostUrl;
+      const basePort = integrationEnvConfig.hostPort + 1;
+      const subPort = basePort + 1;
+
+      console.log({ host, basePort, subPort });
 
       // Initialize Publisher socket for sending commands
       this.pubSocket = new Publisher();
       await this.pubSocket.bind(`tcp://${host}:${basePort}`);
-      logger.info(`Publisher bound to tcp://${host}:${basePort}`);
+      console.info(`Publisher bound to tcp://${host}:${basePort}`);
 
       // Initialize Subscriber socket for receiving replies
       this.subSocket = new Subscriber();
-      await this.subSocket.bind(`tcp://${host}:${basePort + 1}`);
-      logger.info(`Subscriber bound to tcp://${host}:${basePort + 1}`);
+      await this.subSocket.bind(`tcp://${host}:${subPort}`);
+      console.info(`Subscriber bound to tcp://${host}:${subPort}`);
 
       // Start listening for replies
       this.handleReplies();
 
       this.isInitialized = true;
     } catch (error) {
-      logger.error(
+      console.error(
         `Failed to initialize ZeroMQ server: ${(error as Error).message}`
       );
       throw error;
@@ -73,7 +74,7 @@ class ZeromqServer {
           const message = JSON.parse(
             messageBuffer.toString()
           ) as IZeromqMessage;
-          logger.info(
+          console.info(
             `Received reply from channel ${channelId}: ${JSON.stringify(message)}`
           );
 
@@ -91,11 +92,11 @@ class ZeromqServer {
             });
           }
         } catch (error) {
-          logger.error(`Error processing reply: ${(error as Error).message}`);
+          console.error(`Error processing reply: ${(error as Error).message}`);
         }
       }
     } catch (error) {
-      logger.error(`Error in reply handler: ${(error as Error).message}`);
+      console.error(`Error in reply handler: ${(error as Error).message}`);
     }
   }
 
@@ -109,7 +110,7 @@ class ZeromqServer {
         `🔸 Load Average: ${cpu?.load_avg?.[0]?.toFixed(2) || "N/A"}`
       );
     } catch (error) {
-      logger.error(
+      console.error(
         `Error formatting metrics message: ${(error as Error).message}`
       );
       return "Error formatting metrics data";
@@ -126,11 +127,11 @@ class ZeromqServer {
 
     try {
       await this.pubSocket.send([channelId, JSON.stringify(message)]);
-      logger.info(
+      console.info(
         `Published message to channel ${channelId}: ${JSON.stringify(message)}`
       );
     } catch (error) {
-      logger.error(`Failed to publish message: ${(error as Error).message}`);
+      console.error(`Failed to publish message: ${(error as Error).message}`);
       throw error;
     }
   }
@@ -146,9 +147,9 @@ class ZeromqServer {
         this.subSocket = null;
       }
       this.isInitialized = false;
-      logger.info("ZeroMQ server closed");
+      console.info("ZeroMQ server closed");
     } catch (error) {
-      logger.error(`Error closing ZeroMQ server: ${(error as Error).message}`);
+      console.error(`Error closing ZeroMQ server: ${(error as Error).message}`);
       throw error;
     }
   }

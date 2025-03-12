@@ -33,11 +33,7 @@ export async function startMonitoring(): Promise<void> {
     );
 
     // Connect to the integration server
-    await connectToIntegrationServer(
-      channelId,
-      integrationHost,
-      integrationPort
-    );
+    await connectToIntegrationServer(channelId);
 
     saveStoreData({ isMonitoringRunning: true });
 

@@ -1,0 +1,47 @@
+{
+  "name": "telex-server-monitor",
+  "version": "1.0.0",
+  "description": "A lightweight agent that collects and reports server metrics (CPU, memory, disk) to the Telex monitoring platform",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "telex-server-monitor": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli/index.ts",
+    "start": "tsc && tsx dist/cli/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "mkdir -p bin && echo '#!/usr/bin/env node\nimport \"tsx/cjs\";\nimport \"../dist/cli/index.js\";' > bin/cli.js && chmod +x bin/cli.js"
+  },
+  "keywords": [
+    "telex",
+    "monitoring",
+    "server",
+    "metrics",
+    "system"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.7",
+    "commander": "^12.0.0",
+    "luxon": "^3.5.0",
+    "ora": "^8.2.0",
+    "systeminformation": "^5.21.24",
+    "tsx": "^4.19.3",
+    "winston": "^3.11.0",
+    "zeromq": "^6.3.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.4.2",
+    "@types/node": "^22.13.10",
+    "@types/systeminformation": "^3.23.1",
+    "@types/winston": "^2.4.4",
+    "@types/zeromq": "^5.2.5",
+    "nodemon": "^3.1.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  }
+}

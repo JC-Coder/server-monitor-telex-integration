@@ -1,7 +1,6 @@
-import { AppConstants } from "../../package/index.js";
 import { integrationEnvConfig } from "./config.js";
 
-const url = integrationEnvConfig.integrationUrl;
+const url = integrationEnvConfig.hostUrl;
 
 export const telexGeneratedConfig = {
   data: {
@@ -12,7 +11,7 @@ export const telexGeneratedConfig = {
     integration_category: "AI & Machine Learning",
     integration_type: "interval",
     descriptions: {
-      app_name: AppConstants.TelexIntegration.name,
+      app_name: integrationEnvConfig.integrationName,
       app_description:
         "A server monitoring agent that integrates with the Telex platform to track system metrics, detect issues, and send alerts",
       app_logo:

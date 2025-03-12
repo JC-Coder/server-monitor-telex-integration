@@ -22,9 +22,7 @@ let pubSocket: Publisher | null = null;
  * Connect to the integration server's publisher socket
  */
 export async function connectToIntegrationServer(
-  channelId: string,
-  host: string,
-  port: number
+  channelId: string
 ): Promise<void> {
   try {
     if (subSocket) {
@@ -32,16 +30,24 @@ export async function connectToIntegrationServer(
       return;
     }
 
+    // fetch the host and port from the integration server
+    const serverConfig = await getIntegrationServerHostAndPort();
+    const { serverUrl, serverPort } = serverConfig || {};
+
+    if (!serverUrl || !serverPort) {
+      throw new Error("Failed to fetch integration server config");
+    }
+
     // Set up subscriber socket
     subSocket = new Subscriber();
-    const subSocketAddress = `tcp://${host}:${port}`;
+    const subSocketAddress = `tcp://${serverUrl}:${serverPort}`;
     await subSocket.connect(subSocketAddress);
     await subSocket.subscribe(channelId);
 
     // Set up publisher socket for replies
     pubSocket = new Publisher();
-    const pubPort = port + 1; // Use next port for replies
-    const pubSocketAddress = `tcp://${host}:${pubPort}`;
+    const pubPort = serverPort + 1; // Use next port for replies
+    const pubSocketAddress = `tcp://${serverUrl}:${pubPort}`;
     await pubSocket.connect(pubSocketAddress);
 
     logger.info(`Connected to integration server at ${subSocketAddress}`);
@@ -147,5 +153,29 @@ export function closeSocket(): void {
         `Error closing publisher socket: ${(error as Error).message}`
       );
     }
+  }
+}
+
+async function getIntegrationServerHostAndPort(): Promise<{
+  serverUrl: string;
+  serverPort: number;
+} | null> {
+  try {
+    const response = await fetch(
+      "https://raw.githubusercontent.com/JC-Coder/server-monitor-telex-integration/main/global.json"
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch global config: ${response.statusText}`);
+    }
+
+    const config = await response.json();
+
+    const serverUrl = config.serverUrl;
+    const serverPort = config.serverPort;
+
+    return { serverUrl, serverPort };
+  } catch (error) {
+    return null;
   }
 }

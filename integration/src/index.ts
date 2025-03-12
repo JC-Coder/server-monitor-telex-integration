@@ -9,7 +9,7 @@ import { zeromqServer } from "./services/zeromqServer.js";
 import { getMetricsFromPackage } from "./services/metricsService.js";
 
 const app = express();
-const PORT = integrationEnvConfig.integrationPort;
+const PORT = integrationEnvConfig.hostPort;
 
 // Middleware
 app.use(cors());
@@ -88,6 +88,8 @@ app.post("/tick", async (req: Request, res: Response) => {
   const { channel_id, settings } = req.body;
   console.log("new tick from telex", req.body);
 
+  throw new Error(); // no handled -> sdk -> integration -> webhook channel id
+
   // Return initial response to telex immediately
   res.status(200).json({ status: "success", message: "Message received" });
 
@@ -111,14 +113,12 @@ app.use("*", (_, res) => {
 });
 
 // Initialize ZeroMQ server before starting Express
-Promise.all([zeromqServer.initialize(integrationEnvConfig.zeromq.basePort)])
+Promise.all([zeromqServer.initialize()])
   .then(() => {
     // Start server
     app.listen(PORT, () => {
       console.info(`Server is running on port http://localhost:${PORT}`);
-      console.info(
-        `ZeroMQ Publisher running on port ${integrationEnvConfig.zeromq.basePort}`
-      );
+      console.info(`ZeroMQ Publisher Initialized`);
     });
   })
   .catch((error) => {

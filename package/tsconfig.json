@@ -11,6 +11,6 @@
     "strict": true,
     "outDir": "dist"
   },
-  "include": ["src/package/**/*", "src/integration/**/*"],
-  "exclude": ["node_modules", "dist", ".mastra", "src/mastra"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

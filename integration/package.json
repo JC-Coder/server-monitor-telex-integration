@@ -2,20 +2,13 @@
   "name": "telex-server-monitor",
   "version": "1.0.0",
   "description": "Server monitoring agent that integrates with Telex platform",
-  "main": "dist/package/index.js",
+  "main": "dist/index.js",
   "type": "module",
-  "bin": {
-    "telex-server-monitor": "dist/package/cli/index.js"
-  },
   "scripts": {
     "build": "tsc",
-    "dev": "tsx src/package/cli/index.ts",
+    "dev": "nodemon --exec 'tsx' src/index.ts",
     "dev:mastra": "mastra dev",
-    "dev:integration": "nodemon --exec 'tsx' src/integration/index.ts",
-    "start": "tsx src/package/cli/index.js",
-    "start:integration": "npm run build && node dist/integration/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "mkdir -p bin && echo '#!/usr/bin/env node\nimport \"tsx/cjs\";\nimport \"../src/package/cli/index.ts\";' > bin/cli.js && chmod +x bin/cli.js"
+    "start": "tsc && tsx dist/index.js"
   },
   "keywords": [
     "telex",
@@ -32,13 +25,11 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "axios": "^1.6.7",
-    "commander": "^12.0.0",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "luxon": "^3.5.0",
     "mastra": "^0.2.8",
     "ora": "^8.2.0",
-    "systeminformation": "^5.21.24",
     "tsx": "^4.19.3",
     "winston": "^3.11.0",
     "zeromq": "^6.3.0",
@@ -47,7 +38,6 @@
   "devDependencies": {
     "@types/luxon": "^3.4.2",
     "@types/node": "^22.13.10",
-    "@types/systeminformation": "^3.23.1",
     "@types/winston": "^2.4.4",
     "@types/zeromq": "^5.2.5",
     "nodemon": "^3.1.9",

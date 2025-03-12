@@ -1,5 +1,4 @@
 import { zeromqServer } from "./zeromqServer.js";
-import { logger } from "../../package/utils/logger.js";
 
 export interface MetricsData {
   cpu?: {
