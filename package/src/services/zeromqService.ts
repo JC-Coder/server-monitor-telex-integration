@@ -1,6 +1,7 @@
 import { Subscriber, Publisher } from "zeromq";
 import { logger } from "../utils/logger.js";
 import { CollectorService } from "../metrics/collector.js";
+import { AppConstants } from "../utils/constant.js";
 
 export enum MessageType {
   getMetrics = "getMetrics",
@@ -161,9 +162,7 @@ async function getIntegrationServerHostAndPort(): Promise<{
   serverPort: number;
 } | null> {
   try {
-    const response = await fetch(
-      "https://raw.githubusercontent.com/JC-Coder/server-monitor-telex-integration/main/global.json"
-    );
+    const response = await fetch(AppConstants.Package.GlobalConfigUrl);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch global config: ${response.statusText}`);
