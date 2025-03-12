@@ -1,54 +1,69 @@
 # Telex Server Monitor
 
-A server monitoring agent that integrates with the Telex platform to track system metrics, detect issues, and send alerts.
+A server monitoring integration that helps system administrators track server health, detect anomalies, and receive alerts via the Telex platform. The integration consists of two main components:
+
+1. An integration server that handles communication with Telex
+2. A monitoring agent that runs on your server to collect metrics
 
 ## Features
 
-- **Authentication**: Securely authenticate with Telex to fetch settings and API token
-- **System Metrics**: Monitor CPU, memory, and disk usage
-- **Alerting**: Send real-time alerts to Telex when thresholds are exceeded
-- **Configuration**: Centralized configuration via Telex
+- **Secure Communication**: Uses ZeroMQ for reliable messaging between the agent and integration server
+- **System Metrics Monitoring**:
+  - CPU usage and load averages
+  - Number of CPU cores
+  - More metrics coming in future versions
+- **Real-time Alerts**: Instant notifications through Telex when thresholds are exceeded
+- **Easy Installation**: Simple installation script for various operating systems
+- **Centralized Configuration**: Manage all settings through the Telex platform
+- **Cross-Platform Support**: Works on Linux, macOS, and other Unix-like systems
+
+## Architecture
+
+The system uses a distributed architecture:
+
+- **Integration Server**: Runs on a standalone server (e.g., Render, Railway) and communicates with Telex
+- **Monitoring Agent**: Runs on your server and sends metrics to the integration server
+- **ZeroMQ**: Handles reliable communication between the agent and integration server
 
 ## Installation
+
+### Option 1: Quick Install (Recommended)
+
+1. In your Telex channel, run:
+
+```bash
+/setup-monitoring
+```
+
+2. Copy and run the installation command provided by Telex.
+
+### Option 2: Manual Installation
 
 ```bash
 npm install -g telex-server-monitor
 ```
 
-## Usage
-
-### Setup
-
-First, set up the monitor with your Telex credentials:
+Then configure the monitor:
 
 ```bash
-telex-server-monitor setup --email your.email@example.com --password your-password [--server-name "prod-server-1"]
+telex-server-monitor setup --channel-id YOUR_CHANNEL_ID
 ```
 
-This will:
-
-- Authenticate with Telex to obtain an API token
-- Store the token securely in `~/.telex-monitor/config.json`
-- Fetch your monitoring settings from Telex
-- Optionally set a custom server name (defaults to hostname)
+## Usage
 
 ### Start Monitoring
-
-Start the monitoring process:
 
 ```bash
 telex-server-monitor start
 ```
 
-This will:
+### Check Status
 
-- Begin collecting metrics based on your Telex settings
-- Send metrics to Telex for analysis
-- Send alerts when thresholds are exceeded
+```bash
+telex-server-monitor status
+```
 
 ### Stop Monitoring
-
-Stop the monitoring process:
 
 ```bash
 telex-server-monitor stop
@@ -56,46 +71,87 @@ telex-server-monitor stop
 
 ### Reset Configuration
 
-Reset all configuration:
-
 ```bash
 telex-server-monitor reset
 ```
 
 ## Configuration
 
-All configuration is managed through the Telex platform. Settings include:
+All configuration is managed through the Telex platform:
 
-- Metrics to monitor (CPU, memory, disk)
-- Alert thresholds
-- Monitoring frequency
-- Channel IDs for alerts
+- **Metrics Collection**: Choose which metrics to monitor (CPU, Memory, Disk)
+- **Alert Thresholds**: Set custom thresholds for alerts
+- **Monitoring Frequency**: Configure how often metrics are collected
+- **Channel Settings**: Specify which Telex channels receive alerts
+
+## System Requirements
+
+- Node.js v18 or higher
+- Linux, macOS, or other Unix-like operating system
+- Root/sudo access (for installation)
+- Minimum 512MB RAM
+- 100MB free disk space
 
 ## Logs
 
 Logs are stored in `~/.telex-monitor/logs/`:
 
-- `telex-monitor.log`: All logs
+- `telex-monitor.log`: General logs
 - `error.log`: Error logs only
 
 ## Development
 
-### Building from source
+### Prerequisites
+
+- Node.js v18+
+- npm v9+
+- TypeScript 5.8+
+
+### Building from Source
 
 ```bash
-git clone https://github.com/your-username/telex-server-monitor.git
-cd telex-server-monitor
+git clone https://github.com/JC-Coder/server-monitor-telex-integration.git
+cd server-monitor-telex-integration
 npm install
 npm run build
 ```
 
-### Running in development mode
+### Running in Development Mode
+
+Integration Server:
 
 ```bash
-npm run dev -- setup --email your.email@example.com --password your-password
-npm run dev -- start
+npm run dev:integration
 ```
+
+Monitoring Agent:
+
+```bash
+npm run dev
+```
+
+## Architecture Diagram
+
+```
+┌─────────────┐         ┌─────────────┐         ┌─────────────┐
+│   Your      │         │ Integration │         │   Telex     │
+│   Server    │◄───────►│   Server    │◄───────►│  Platform   │
+│  (Agent)    │   ZMQ   │             │   HTTP  │             │
+└─────────────┘         └─────────────┘         └─────────────┘
+```
+
+## Contributing
+
+Contributions are welcome! Please read our contributing guidelines for details.
 
 ## License
 
 ISC
+
+## Support
+
+For support, please:
+
+1. Check the [documentation](https://github.com/JC-Coder/server-monitor-telex-integration)
+2. Open an issue on GitHub
+3. Contact Telex support
