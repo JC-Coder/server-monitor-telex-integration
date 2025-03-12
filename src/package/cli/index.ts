@@ -8,11 +8,10 @@ import {
 } from "../lib/monitor.js";
 import { logger } from "../utils/logger.js";
 import fs from "fs";
-import { checkIfPackageIsConfiguredAlready } from "../index.js";
+import { checkIfPackageIsConfiguredAlready, CollectorService } from "../index.js";
 import { AppConstants, clearStore, saveStoreData } from "../index.js";
 import chalk from "chalk";
 import ora from "ora";
-import { getFormattedCpuMetrics } from "../metrics/collector.js";
 
 // Add this new utility function
 function displayIntegrationHeader() {
@@ -149,7 +148,7 @@ program
         logger.info("Monitoring is currently running");
 
         // Display current CPU metrics
-        const cpuMetrics = await getFormattedCpuMetrics();
+        const cpuMetrics = await CollectorService.getFormattedCpuMetrics();
         console.log("\nCurrent CPU Metrics:");
         console.log(cpuMetrics);
       } else {
