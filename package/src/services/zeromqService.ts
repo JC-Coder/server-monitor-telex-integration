@@ -33,11 +33,15 @@ export async function connectToIntegrationServer(
 
     // fetch the host and port from the integration server
     const serverConfig = await getIntegrationServerHostAndPort();
-    const { serverUrl, serverPort } = serverConfig || {};
 
-    if (!serverUrl || !serverPort) {
+    if (!serverConfig?.serverUrl || !serverConfig?.serverPort) {
       throw new Error("Failed to fetch integration server config");
     }
+
+    const serverUrl = serverConfig?.serverUrl;
+    const serverPort = serverConfig?.serverPort + 1;
+
+    console.log("serverConfig", serverConfig);
 
     // Set up subscriber socket
     subSocket = new Subscriber();
@@ -169,6 +173,8 @@ async function getIntegrationServerHostAndPort(): Promise<{
     }
 
     const config = await response.json();
+
+    console.log({ config });
 
     const serverUrl = config.serverUrl;
     const serverPort = config.serverPort;
