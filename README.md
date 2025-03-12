@@ -1,33 +1,29 @@
 # Telex Server Monitor
 
-A server monitoring integration that helps system administrators track server health, detect anomalies, and receive alerts via the Telex platform. The integration consists of two main components:
+A server monitoring integration that helps system administrators track server health, detect anomalies, and receive alerts via the Telex platform. The integration consists of an agent installed on your server that collects and reports key metrics to Telex.
 
-1. An integration server that handles communication with Telex
-2. A monitoring agent that runs on your server to collect metrics
+[![Version](https://img.shields.io/badge/version-1.0-blue.svg)](https://github.com/yourusername/telex-server-monitor)
+[![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 
 ## Features
 
-- **Secure Communication**: Uses ZeroMQ for reliable messaging between the agent and integration server
-- **System Metrics Monitoring**:
-  - CPU usage and load averages
-  - Number of CPU cores
-  - More metrics coming in future versions
-- **Real-time Alerts**: Instant notifications through Telex when thresholds are exceeded
-- **Easy Installation**: Simple installation script for various operating systems
-- **Centralized Configuration**: Manage all settings through the Telex platform
-- **Cross-Platform Support**: Works on Linux, macOS, and other Unix-like systems
+### Version 1.0
 
-## Architecture
+- **Telex Integration**: Seamless registration within your Telex organization
+- **Agent Installation**: Simple installation via Telex-generated script
+- **CPU Usage Tracking**: Real-time monitoring of total CPU usage
+- **Default Threshold Alerts**: Automatic alerts when CPU usage exceeds 85%
 
-The system uses a distributed architecture:
+## Prerequisites
 
-- **Integration Server**: Runs on a standalone server (e.g., Render, Railway) and communicates with Telex
-- **Monitoring Agent**: Runs on your server and sends metrics to the integration server
-- **ZeroMQ**: Handles reliable communication between the agent and integration server
+- Linux, macOS, or other Unix-like operating system
+- Root/sudo access (for installation)
+- Minimum 512MB RAM
+- 100MB free disk space
 
 ## Installation
 
-### Option 1: Quick Install (Recommended)
+### Quick Install (Recommended)
 
 1. In your Telex channel, run:
 
@@ -35,102 +31,53 @@ The system uses a distributed architecture:
 /setup-monitoring
 ```
 
-2. Copy and run the installation command provided by Telex.
-
-### Option 2: Manual Installation
+2. Copy the installation command provided by Telex and run it on your server:
 
 ```bash
-npm install -g telex-server-monitor
+curl -sSL https://telex.example.com/install/<unique-token> | sudo bash
 ```
 
-Then configure the monitor:
+The installation script will:
 
-```bash
-telex-server-monitor setup --channel-id YOUR_CHANNEL_ID
-```
+- Download and install the monitoring agent
+- Configure authentication automatically
+- Set up initial monitoring settings
+- Start the monitoring service
 
 ## Usage
 
-### Start Monitoring
+### Service Management
 
 ```bash
-telex-server-monitor start
+# Check monitoring status
+sudo systemctl status telex-monitor
+
+# Stop monitoring
+sudo systemctl stop telex-monitor
+
+# Start monitoring
+sudo systemctl start telex-monitor
+
+# Restart monitoring
+sudo systemctl restart telex-monitor
 ```
 
-### Check Status
-
-```bash
-telex-server-monitor status
-```
-
-### Stop Monitoring
-
-```bash
-telex-server-monitor stop
-```
-
-### Reset Configuration
-
-```bash
-telex-server-monitor reset
-```
-
-## Configuration
+### Configuration
 
 All configuration is managed through the Telex platform:
 
-- **Metrics Collection**: Choose which metrics to monitor (CPU, Memory, Disk)
-- **Alert Thresholds**: Set custom thresholds for alerts
-- **Monitoring Frequency**: Configure how often metrics are collected
-- **Channel Settings**: Specify which Telex channels receive alerts
+- CPU usage threshold (default: 85%)
+- Alert channel settings
+- Monitoring status (on/off)
 
-## System Requirements
+### Logs
 
-- Node.js v18 or higher
-- Linux, macOS, or other Unix-like operating system
-- Root/sudo access (for installation)
-- Minimum 512MB RAM
-- 100MB free disk space
-
-## Logs
-
-Logs are stored in `~/.telex-monitor/logs/`:
+Logs are stored in `/var/log/telex-monitor/`:
 
 - `telex-monitor.log`: General logs
 - `error.log`: Error logs only
 
-## Development
-
-### Prerequisites
-
-- Node.js v18+
-- npm v9+
-- TypeScript 5.8+
-
-### Building from Source
-
-```bash
-git clone https://github.com/JC-Coder/server-monitor-telex-integration.git
-cd server-monitor-telex-integration
-npm install
-npm run build
-```
-
-### Running in Development Mode
-
-Integration Server:
-
-```bash
-npm run dev:integration
-```
-
-Monitoring Agent:
-
-```bash
-npm run dev
-```
-
-## Architecture Diagram
+## Architecture
 
 ```
 ┌─────────────┐         ┌─────────────┐         ┌─────────────┐
@@ -140,18 +87,21 @@ npm run dev
 └─────────────┘         └─────────────┘         └─────────────┘
 ```
 
-## Contributing
+## Troubleshooting
 
-Contributions are welcome! Please read our contributing guidelines for details.
+Common issues and solutions:
+
+1. **Installation Failed**
+
+   - Ensure you have root/sudo access
+   - Check your network connection
+   - Verify the installation token is valid
+
+2. **Agent Not Reporting**
+   - Check if the service is running: `sudo systemctl status telex-monitor`
+   - Verify network connectivity
+   - Check logs for errors: `tail -f /var/log/telex-monitor/error.log`
 
 ## License
 
-ISC
-
-## Support
-
-For support, please:
-
-1. Check the [documentation](https://github.com/JC-Coder/server-monitor-telex-integration)
-2. Open an issue on GitHub
-3. Contact Telex support
+ISC © [JC-Coder](https://github.com/jc-coder)

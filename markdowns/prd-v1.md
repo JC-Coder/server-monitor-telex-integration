@@ -20,19 +20,23 @@ The Telex Server Monitor Agent is an npm package that monitors the health and pe
 
 ### 1. Authentication and Configuration
 
-**Description:** Authenticate with Telex using email and password to fetch settings and an API token.
+**Description:** Install and configure the agent using a Telex-generated installation URL.
 
 **Details:**
 
-- Users provide their Telex email and password during setup to obtain a secure API token
-- Token is stored locally (encrypted) and used for all subsequent interactions with Telex
-- Settings fetched from a Telex endpoint include:
+- Users register the integration within their Telex organization
+- Telex generates a unique cURL URL for agent installation
+- The installation script:
+  - Downloads and configures the agent
+  - Sets up secure authentication tokens automatically
+  - Configures initial monitoring settings
+- Settings fetched from Telex include:
   - Channel IDs for alert delivery
-  - Metrics/services to monitor (e.g., CPU, disk, specific services like nginx)
-  - Thresholds for alerts (e.g., CPU > 85%, disk > 90%)
+  - Metrics/services to monitor (e.g., CPU, disk, specific services)
+  - Alert thresholds (e.g., CPU > 85%, disk > 90%)
   - Monitoring toggle (on/off)
-  - Data collection frequency (e.g., every 5 minutes)
-- Configuration is centralized via Telex, ensuring users can adjust settings without redeploying the agent
+  - Data collection frequency
+- Configuration remains centralized via Telex, allowing users to adjust settings without agent redeployment
 
 ### 2. System Metrics Monitoring
 
@@ -149,60 +153,46 @@ The Telex Server Monitor Agent is an npm package that monitors the health and pe
 
 ### Installation
 
-User installs the package on their server:
+1. User registers the Telex Server Monitor Integration in their Telex organization
+2. User generates an installation URL from Telex
+3. User runs the provided cURL command on their server:
 
 ```bash
-npm install telex-server-monitor
+curl -sSL https://telex.example.com/install/<unique-token> | sudo bash
 ```
 
-### Setup
+The installation script:
 
-User runs the setup command:
-
-```bash
-npx telex-server-monitor setup --email <email> --password <password> [--server-name "prod-server-1"]
-```
-
-Agent:
-
-- Authenticates with Telex to fetch an API token
-- Stores token securely in ~/.telex-monitor/config.json
-- Optionally accepts a custom server name (defaults to hostname)
+- Downloads the agent package
+- Configures authentication automatically
+- Sets up initial monitoring settings
+- Starts the agent service
 
 ### Configuration via Telex
 
-User logs into Telex to define:
+User configures monitoring settings through the Telex interface:
 
-- Metrics to monitor (e.g., CPU, disk, services)
-- Thresholds (e.g., CPU > 85%)
-- Services to track (e.g., nginx, docker)
+- Metrics to monitor (CPU, disk, services)
+- Alert thresholds
+- Services to track
 - Channel IDs for alerts and data
-  Settings are saved and fetched by the agent on startup
 
-### Start Monitoring
+Settings are automatically synchronized with the agent.
 
-User launches the agent:
+### Start/Stop Monitoring
 
-```bash
-npx telex-server-monitor start
-```
-
-Agent:
-
-- Loads token and fetches settings from Telex
-- Begins collecting metrics, process statuses, logs, and hardware data
-- Sends alerts for threshold breaches or issues
-- Periodically sends structured data to Telex for AI analysis
-
-### Stop Monitoring
-
-User stops the agent:
+Control the agent using system service commands:
 
 ```bash
-npx telex-server-monitor stop
-```
+# Start the agent
+sudo systemctl start telex-monitor
 
-Agent shuts down gracefully, ceasing all monitoring
+# Stop the agent
+sudo systemctl stop telex-monitor
+
+# Check status
+sudo systemctl status telex-monitor
+```
 
 ## Use Cases
 
