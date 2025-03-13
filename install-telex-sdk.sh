@@ -56,16 +56,6 @@ fi
 
 print_message "info" "Detected OS: $OS"
 
-# Cleanup previous installation if it exists
-if systemctl list-unit-files | grep -q "telex-server-monitor.service"; then
-    print_message "info" "Found previous installation. Cleaning up..."
-    sudo systemctl stop telex-server-monitor
-    sudo systemctl disable telex-server-monitor
-    sudo rm /etc/systemd/system/telex-server-monitor.service
-    sudo systemctl daemon-reload
-    print_message "success" "Previous installation cleaned up"
-fi
-
 # Install Node.js if not present
 if ! command_exists node; then
     print_message "info" "Node.js not found. Installing Node.js..."
@@ -107,7 +97,14 @@ if ! command_exists npm; then
     exit 1
 fi
 
-# Create service directory
+# Install PM2 globally if not present
+if ! command_exists pm2; then
+    print_message "info" "Installing PM2 globally..."
+    sudo npm install -g pm2
+    print_message "success" "PM2 installed successfully"
+fi
+
+# Create installation directory
 INSTALL_DIR="/opt/telex-server-monitor"
 sudo mkdir -p $INSTALL_DIR
 
@@ -142,93 +139,96 @@ sudo chmod +x "$CLI_PATH"
 print_message "info" "Setting up Telex Server Monitor..."
 "$NODE_PATH" "$CLI_PATH" setup --channel-id "$CHANNEL_ID"
 
-# Create configuration directory
-sudo mkdir -p /etc/telex-server-monitor
-
-# Create the service configuration
-print_message "info" "Creating service configuration..."
-
-# Create systemd service file
-if [ -d "/etc/systemd/system" ]; then
-    cat << EOF | sudo tee /etc/systemd/system/telex-server-monitor.service
-[Unit]
-Description=Telex Server Monitor
-After=network.target
-
-[Service]
-Type=simple
-User=root
-ExecStart=$NODE_PATH $CLI_PATH start
-Restart=always
-RestartSec=10
-Environment=NODE_ENV=production
-WorkingDirectory=$NPM_GLOBAL_DIR/telex-server-monitor-sdk
-
-[Install]
-WantedBy=multi-user.target
+# Create PM2 ecosystem file
+cat << EOF | sudo tee $INSTALL_DIR/ecosystem.config.js
+module.exports = {
+  apps: [{
+    name: 'telex-server-monitor',
+    script: '$CLI_PATH',
+    args: 'start',
+    exp_backoff_restart_delay: 100,
+    max_memory_restart: '200M',
+    log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    merge_logs: true,
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    env: {
+      NODE_ENV: 'production'
+    },
+    restart_delay: 4000,
+    max_restarts: 10,
+    min_uptime: '30s'
+  }]
+}
 EOF
 
-    # Stop any existing service
-    sudo systemctl stop telex-server-monitor || true
-    
-    # Reload systemd and enable/start service
-    sudo systemctl daemon-reload
-    sudo systemctl enable telex-server-monitor
-    sudo systemctl start telex-server-monitor
-    
-    print_message "info" "Waiting for service to start..."
-    sleep 2
-    
-    # Check service status with more verbose output
-    sudo systemctl status telex-server-monitor --no-pager -l
-    
-    # Check journal logs for any errors
-    print_message "info" "Recent service logs:"
-    sudo journalctl -u telex-server-monitor -n 20 --no-pager
+# Stop any existing PM2 process
+pm2 delete telex-server-monitor 2>/dev/null || true
 
-elif [ -d "/Library/LaunchDaemons" ]; then
-    # macOS service configuration
-    cat << EOF | sudo tee /Library/LaunchDaemons/com.telex.server-monitor.plist
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.telex.server-monitor</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/usr/local/bin/telex-server-monitor</string>
-        <string>start</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-    <key>StandardErrorPath</key>
-    <string>/var/log/telex-server-monitor.err</string>
-    <key>StandardOutPath</key>
-    <string>/var/log/telex-server-monitor.log</string>
-    <key>EnvironmentVariables</key>
-    <dict>
-        <key>NODE_ENV</key>
-        <string>production</string>
-    </dict>
-</dict>
-</plist>
-EOF
+# Start the application with PM2
+print_message "info" "Starting Telex Server Monitor with PM2..."
+pm2 start $INSTALL_DIR/ecosystem.config.js
 
-    # Load and start the service
-    sudo launchctl load -w /Library/LaunchDaemons/com.telex.server-monitor.plist
-    
-    print_message "success" "Service installed and started"
+# Set up PM2 to start on system boot
+print_message "info" "Setting up PM2 startup script..."
+
+# Generate startup script based on OS
+case $OS in
+    "Ubuntu" | "Debian GNU/Linux")
+        # For Ubuntu/Debian systems
+        pm2 startup systemd -u $USER --hp $HOME
+        ;;
+    "CentOS Linux" | "Red Hat Enterprise Linux")
+        # For CentOS/RHEL systems
+        pm2 startup | tail -n 1 | sudo bash
+        ;;
+    "Amazon Linux")
+        # For Amazon Linux
+        pm2 startup | tail -n 1 | sudo bash
+        ;;
+    *)
+        # Default startup command
+        pm2 startup | tail -n 1 | sudo bash
+        ;;
+esac
+
+# Save the current PM2 process list
+pm2 save
+
+# Verify PM2 startup configuration
+if systemctl list-unit-files | grep -q "pm2-$USER.service"; then
+    print_message "success" "PM2 startup service installed successfully"
 else
-    print_message "error" "Could not detect systemd or launchd. Please set up the service manually."
-    exit 1
+    print_message "warn" "PM2 startup service not found. Manual verification required"
 fi
+
+# Create a startup verification script
+cat << EOF | sudo tee $INSTALL_DIR/verify-startup.sh
+#!/bin/bash
+# Wait for network to be up
+sleep 30
+# Check if PM2 is running
+if ! pm2 list | grep -q "telex-server-monitor"; then
+    # If not running, start PM2 and the monitor
+    pm2 resurrect
+    if ! pm2 list | grep -q "telex-server-monitor"; then
+        pm2 start $INSTALL_DIR/ecosystem.config.js
+    fi
+fi
+EOF
+
+# Make the verification script executable
+sudo chmod +x $INSTALL_DIR/verify-startup.sh
+
+# Add the verification script to crontab to run on reboot
+(crontab -l 2>/dev/null; echo "@reboot $INSTALL_DIR/verify-startup.sh") | crontab -
 
 # Create log directories
 sudo mkdir -p /var/log/telex-server-monitor
 
 print_message "success" "Telex Server Monitor installation completed successfully!"
-print_message "info" "You can check the status using: telex-server-monitor status"
-print_message "info" "View logs in /var/log/telex-server-monitor.log" 
+print_message "info" "The service will automatically start on system reboot"
+print_message "info" "You can check the status using: pm2 status telex-server-monitor"
+print_message "info" "View logs using: pm2 logs telex-server-monitor"
+print_message "info" "To manually restart the service: pm2 restart telex-server-monitor" 
