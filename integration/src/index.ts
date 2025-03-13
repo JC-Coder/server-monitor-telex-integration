@@ -7,6 +7,7 @@ import { AppResponse, IntegrationConstants } from "./utils/constant.js";
 import { TelexService } from "./services/telexRequest.js";
 import { zeromqServer } from "./services/zeromqServer.js";
 import { getMetricsFromPackage } from "./services/metricsService.js";
+import { GlobalErrorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
 const PORT = integrationEnvConfig.hostPort;
@@ -42,29 +43,18 @@ app.post("/webhook", async (req: Request, res: Response) => {
     const installCommand =
       IntegrationConstants.Github.InstallationScriptUrl(channel_id);
     const setupInstructions = `
-🚀 *Setting Up System Monitoring*
+🚀 Server Monitoring Setup
 
-Follow these steps to set up monitoring for your system:
+1. Open your server's terminal
 
-1️⃣ Download the monitoring agent by running:
+2. Run this command:
 \`\`\`
 ${installCommand}
 \`\`\`
 
-2️⃣ The script will automatically:
-   • Install required dependencies
-   • Configure the monitoring agent
-   • Start the monitoring service
+✨ That's it! You'll start receiving server alerts here.
 
-3️⃣ Once installed, you'll start receiving:
-   • CPU usage alerts
-
-⚠️ *Requirements*:
-• Linux/Unix-based system
-• Root/sudo access
-• curl installed
-
-Need help? Visit our documentation at ${IntegrationConstants.Github.Repository}
+❓ Need help? Visit our docs: ${IntegrationConstants.Github.Repository}
 `;
     TelexService.SendWebhookResponse({
       channelId: channel_id,
@@ -88,8 +78,6 @@ app.post("/tick", async (req: Request, res: Response) => {
   const { channel_id, settings } = req.body;
   console.log("new tick from telex", req.body);
 
-  throw new Error(); // no handled -> sdk -> integration -> webhook channel id
-
   // Return initial response to telex immediately
   res.status(200).json({ status: "success", message: "Message received" });
 
@@ -111,6 +99,9 @@ app.use("*", (_, res) => {
     data: `🤔 Hmm... looks like you're lost in the matrix! 🕴️, visit 👉 ${IntegrationConstants.Github.Repository} 👈`,
   }).Success();
 });
+
+// Global error handler
+app.use(GlobalErrorHandler);
 
 // Start server
 app.listen(PORT, () => {

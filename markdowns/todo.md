@@ -40,5 +40,12 @@ curl --location 'https://5lldpsml-3002.uks1.devtunnels.ms/webhook' \
 --header 'Content-Type: application/json' \
 --data '{
 "message": "hello",
-"channel_id": "01950eec-97c4-7f92-bda8-62c7264209b3"
+"channel_id": "01958c26-84ff-73c1-be12-006bb6e7c906"
+}'
+
+curl --location 'http://localhost:3002/webhook' \
+--header 'Content-Type: application/json' \
+--data '{
+"message": "hello",
+"channel_id": "01958c26-84ff-73c1-be12-006bb6e7c906"
 }'
