@@ -39,12 +39,12 @@ class ZeromqServer {
 
       // Initialize Publisher socket for sending commands
       this.pubSocket = new Publisher();
-      await this.pubSocket.bind(`tcp://${host}:${basePort}`);
+      await this.pubSocket.connect(`tcp://${host}:${basePort}`);
       console.info(`Publisher bound to tcp://${host}:${basePort}`);
 
       // Initialize Subscriber socket for receiving replies
       this.subSocket = new Subscriber();
-      await this.subSocket.bind(`tcp://${host}:${subPort}`);
+      await this.subSocket.connect(`tcp://${host}:${subPort}`);
       console.info(`Subscriber bound to tcp://${host}:${subPort}`);
 
       // Start listening for replies

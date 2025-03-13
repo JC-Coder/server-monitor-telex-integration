@@ -112,19 +112,22 @@ app.use("*", (_, res) => {
   }).Success();
 });
 
-// Initialize ZeroMQ server before starting Express
-Promise.all([zeromqServer.initialize()])
-  .then(() => {
-    // Start server
-    app.listen(PORT, () => {
-      console.info(`Server is running on port http://localhost:${PORT}`);
-      console.info(`ZeroMQ Publisher Initialized`);
-    });
-  })
-  .catch((error) => {
-    console.error("Failed to initialize ZeroMQ server:", error);
-    process.exit(1);
-  });
+// Start server
+app.listen(PORT, () => {
+  console.info(`Server is running on port http://localhost:${PORT}`);
+});
+
+// start zeromq server
+try {
+  // sleep for 2 seconds before initializing zeromq server
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+
+  zeromqServer.initialize();
+  console.info(`ZeroMQ Publisher Initialized`);
+} catch (error) {
+  console.error("Failed to initialize ZeroMQ server:", error);
+  process.exit(1);
+}
 
 // Handle graceful shutdown
 process.on("SIGTERM", async () => {
