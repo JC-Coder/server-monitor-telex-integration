@@ -75,12 +75,6 @@ program
         fs.mkdirSync(AppConstants.Package.LogsDir, { recursive: true });
       }
 
-      // reset the previous configuration
-      clearStore();
-
-      // stop the monitoring service
-      stopMonitoring();
-
       // Save the channel ID if provided
       if (options.channelId) {
         saveStoreData({

@@ -47,5 +47,5 @@ curl --location 'http://localhost:3002/webhook' \
 --header 'Content-Type: application/json' \
 --data '{
 "message": "hello",
-"channel_id": "01958c26-84ff-73c1-be12-006bb6e7c906"
+"channel_id": "0195918e-c972-7858-b70c-becb7eb70259"
 }'

@@ -56,6 +56,16 @@ fi
 
 print_message "info" "Detected OS: $OS"
 
+# Cleanup previous installation if it exists
+if systemctl list-unit-files | grep -q "telex-server-monitor.service"; then
+    print_message "info" "Found previous installation. Cleaning up..."
+    sudo systemctl stop telex-server-monitor
+    sudo systemctl disable telex-server-monitor
+    sudo rm /etc/systemd/system/telex-server-monitor.service
+    sudo systemctl daemon-reload
+    print_message "success" "Previous installation cleaned up"
+fi
+
 # Install Node.js if not present
 if ! command_exists node; then
     print_message "info" "Node.js not found. Installing Node.js..."
