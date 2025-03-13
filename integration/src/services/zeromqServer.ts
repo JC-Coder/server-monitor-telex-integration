@@ -31,7 +31,7 @@ class ZeromqServer {
     }
 
     try {
-      const host = "http://localhost";
+      const host = integrationEnvConfig.host;
       const basePort = integrationEnvConfig.hostPort + 1;
       const subPort = basePort + 1;
 
