@@ -105,9 +105,21 @@ sudo mkdir -p $INSTALL_DIR
 print_message "info" "Installing Telex Server Monitor..."
 sudo npm install -g telex-server-monitor-sdk
 
+# Find the actual path of the telex-server-monitor executable
+MONITOR_PATH=$(which telex-server-monitor)
+if [ -z "$MONITOR_PATH" ]; then
+    print_message "error" "Could not find telex-server-monitor executable"
+    exit 1
+fi
+
+print_message "info" "Found telex-server-monitor at: $MONITOR_PATH"
+
+# Ensure executable permissions
+sudo chmod +x "$MONITOR_PATH"
+
 # Run setup command to initialize configuration
 print_message "info" "Setting up Telex Server Monitor..."
-telex-server-monitor setup --channel-id "$CHANNEL_ID"
+"$MONITOR_PATH" setup --channel-id "$CHANNEL_ID"
 
 # Create configuration directory
 sudo mkdir -p /etc/telex-server-monitor
@@ -125,10 +137,11 @@ After=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=/usr/local/bin/telex-server-monitor start
+ExecStart=$MONITOR_PATH start
 Restart=always
 RestartSec=10
 Environment=NODE_ENV=production
+WorkingDirectory=/opt/telex-server-monitor
 
 [Install]
 WantedBy=multi-user.target
