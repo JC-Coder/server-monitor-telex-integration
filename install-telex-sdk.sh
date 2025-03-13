@@ -101,6 +101,9 @@ fi
 INSTALL_DIR="/opt/telex-server-monitor"
 sudo mkdir -p $INSTALL_DIR
 
+# Uninstall the Telex Server Monitor package if it was previously installed
+sudo npm uninstall -g telex-server-monitor-sdk
+
 # Install the Telex Server Monitor package
 print_message "info" "Installing Telex Server Monitor..."
 sudo npm install -g telex-server-monitor-sdk

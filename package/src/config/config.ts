@@ -1,5 +1,6 @@
 import { AppConstants, getStoreData } from "../index.js";
 
+// NOTE: this is not used , consider removing it
 export function checkIfPackageIsConfiguredAlready() {
   const storeData = getStoreData();
 

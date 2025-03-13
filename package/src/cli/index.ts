@@ -8,7 +8,7 @@ import {
 } from "../lib/monitor.js";
 import { logger } from "../utils/logger.js";
 import fs from "fs";
-import { checkIfPackageIsConfiguredAlready, CollectorService } from "../index.js";
+import { CollectorService } from "../index.js";
 import { AppConstants, clearStore, saveStoreData } from "../index.js";
 import chalk from "chalk";
 import ora from "ora";
@@ -75,8 +75,11 @@ program
         fs.mkdirSync(AppConstants.Package.LogsDir, { recursive: true });
       }
 
-      // check if the package is already configured
-      checkIfPackageIsConfiguredAlready();
+      // reset the previous configuration
+      clearStore();
+
+      // stop the monitoring service
+      stopMonitoring();
 
       // Save the channel ID if provided
       if (options.channelId) {
