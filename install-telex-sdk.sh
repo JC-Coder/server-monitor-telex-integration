@@ -105,6 +105,10 @@ sudo mkdir -p $INSTALL_DIR
 print_message "info" "Installing Telex Server Monitor..."
 sudo npm install -g telex-server-monitor-sdk
 
+# Run setup command to initialize configuration
+print_message "info" "Setting up Telex Server Monitor..."
+telex-server-monitor setup --channel-id "$CHANNEL_ID"
+
 # Create configuration directory
 sudo mkdir -p /etc/telex-server-monitor
 
@@ -121,7 +125,7 @@ After=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=/usr/local/bin/telex-server-monitor start --channel-id $CHANNEL_ID
+ExecStart=/usr/local/bin/telex-server-monitor start
 Restart=always
 RestartSec=10
 Environment=NODE_ENV=production
@@ -153,8 +157,6 @@ elif [ -d "/Library/LaunchDaemons" ]; then
     <array>
         <string>/usr/local/bin/telex-server-monitor</string>
         <string>start</string>
-        <string>--channel-id</string>
-        <string>$CHANNEL_ID</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
@@ -181,6 +183,9 @@ else
     print_message "error" "Could not detect systemd or launchd. Please set up the service manually."
     exit 1
 fi
+
+# Create log directories
+sudo mkdir -p /var/log/telex-server-monitor
 
 print_message "success" "Telex Server Monitor installation completed successfully!"
 print_message "info" "You can check the status using: telex-server-monitor status"
