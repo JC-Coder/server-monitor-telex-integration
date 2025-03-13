@@ -105,21 +105,29 @@ sudo mkdir -p $INSTALL_DIR
 print_message "info" "Installing Telex Server Monitor..."
 sudo npm install -g telex-server-monitor-sdk
 
-# Find the actual path of the telex-server-monitor executable
-MONITOR_PATH=$(which telex-server-monitor)
-if [ -z "$MONITOR_PATH" ]; then
-    print_message "error" "Could not find telex-server-monitor executable"
+# Find npm global directory
+NPM_GLOBAL_DIR=$(npm root -g)
+print_message "info" "NPM global directory: $NPM_GLOBAL_DIR"
+
+# Find node executable
+NODE_PATH=$(which node)
+print_message "info" "Node executable path: $NODE_PATH"
+
+# Find the CLI entry point
+CLI_PATH="$NPM_GLOBAL_DIR/telex-server-monitor-sdk/dist/cli/index.js"
+if [ ! -f "$CLI_PATH" ]; then
+    print_message "error" "Could not find CLI entry point at $CLI_PATH"
     exit 1
 fi
 
-print_message "info" "Found telex-server-monitor at: $MONITOR_PATH"
+print_message "info" "Found CLI entry point at: $CLI_PATH"
 
 # Ensure executable permissions
-sudo chmod +x "$MONITOR_PATH"
+sudo chmod +x "$CLI_PATH"
 
 # Run setup command to initialize configuration
 print_message "info" "Setting up Telex Server Monitor..."
-"$MONITOR_PATH" setup --channel-id "$CHANNEL_ID"
+"$NODE_PATH" "$CLI_PATH" setup --channel-id "$CHANNEL_ID"
 
 # Create configuration directory
 sudo mkdir -p /etc/telex-server-monitor
@@ -137,25 +145,33 @@ After=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=$MONITOR_PATH start
+ExecStart=$NODE_PATH $CLI_PATH start
 Restart=always
 RestartSec=10
 Environment=NODE_ENV=production
-WorkingDirectory=/opt/telex-server-monitor
+WorkingDirectory=$NPM_GLOBAL_DIR/telex-server-monitor-sdk
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
+    # Stop any existing service
+    sudo systemctl stop telex-server-monitor || true
+    
     # Reload systemd and enable/start service
     sudo systemctl daemon-reload
     sudo systemctl enable telex-server-monitor
     sudo systemctl start telex-server-monitor
     
-    print_message "success" "Service installed and started"
+    print_message "info" "Waiting for service to start..."
+    sleep 2
     
-    # Check service status
-    sudo systemctl status telex-server-monitor --no-pager
+    # Check service status with more verbose output
+    sudo systemctl status telex-server-monitor --no-pager -l
+    
+    # Check journal logs for any errors
+    print_message "info" "Recent service logs:"
+    sudo journalctl -u telex-server-monitor -n 20 --no-pager
 
 elif [ -d "/Library/LaunchDaemons" ]; then
     # macOS service configuration
