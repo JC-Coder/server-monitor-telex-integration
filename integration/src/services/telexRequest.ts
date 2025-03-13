@@ -12,9 +12,12 @@ const SendWebhookResponse = async (payload: {
       throw new Error("Channel ID and message are required");
     }
 
+    const messageSignature = `\n\n_🔍 Sent by ${IntegrationConstants.App.Name}_`;
+    const signedMessage = message + messageSignature;
+
     await axios.post(`${IntegrationConstants.Telex.WebhookUrl}/${channelId}`, {
       event_name: IntegrationConstants.App.Name,
-      message: message,
+      message: signedMessage,
       status: "success",
       username: IntegrationConstants.App.Name,
     });

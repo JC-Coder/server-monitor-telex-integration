@@ -38,6 +38,11 @@ app.post("/webhook", async (req: Request, res: Response) => {
   // Return initial response to telex immediately
   res.status(200).json({ status: "success", message: "Message received" });
 
+  // don't do anything if the message is from this integration
+  if (message.includes(IntegrationConstants.App.Name)) {
+    return;
+  }
+
   // Handle setup command specifically
   if (message.includes("/setup-monitoring")) {
     const installCommand =
