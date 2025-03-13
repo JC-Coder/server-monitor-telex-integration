@@ -11,7 +11,7 @@ export const IntegrationConstants = {
   Github: {
     Repository: "https://github.com/JC-Coder/server-monitor-telex-integration",
     InstallationScriptUrl: (channelId: string) => {
-      return `curl -sSL https://raw.githubusercontent.com/JC-Coder/server-monitor-telex-integration/main/install.sh | bash -s -- --channel-id ${channelId}`;
+      return `curl -sSL https://github.com/JC-Coder/server-monitor-telex-integration/blob/dev/install-telex-sdk.sh | bash -s -- --channel-id ${channelId}`;
     },
   },
   Telex: {
